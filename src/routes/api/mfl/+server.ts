@@ -20,7 +20,8 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
         if (!leagueId) {
           return json({ error: 'League ID required' }, { status: 400 });
         }
-        const transactions = await getTransactions(leagueId, cookie, transType, days);
+        const currentWeek = await getCurrentWeek();
+        const transactions = await getTransactions(leagueId, cookie, transType, days ?? currentWeek * 7);
         return json({ transactions });
       }
       
