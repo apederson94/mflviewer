@@ -116,20 +116,7 @@
     selectedLeague = league;
   }
 
-  async function handleRemoveLeague(leagueId: string) {
-    const league = leagues.find(l => l.id === leagueId);
-    const confirmed = window.confirm(`Remove "${league?.name || leagueId}" from your list?`);
-    if (!confirmed) return;
-    
-    const newLeagues = leagues.filter(l => l.id !== leagueId);
-    leagues = newLeagues;
-    localStorage.setItem('leagues', JSON.stringify(newLeagues));
-    
-    if (selectedLeague?.id === leagueId) {
-      selectedLeague = null;
-      transactions = [];
-    }
-  }
+  
 </script>
 
 <svelte:head>
@@ -179,16 +166,6 @@
           >
             <span class="league-name">{league.name}</span>
             <span class="league-id">{league.id}</span>
-            <button 
-              onclick={(e) => {
-                e.stopPropagation();
-                handleRemoveLeague(league.id);
-              }}
-              class="remove-league-btn"
-              title="Remove league"
-            >
-              ×
-            </button>
           </li>
         {/each}
       </ul>
@@ -365,26 +342,6 @@
     color: #888;
     font-size: 0.75rem;
     margin-left: 0.5rem;
-  }
-
-  .remove-league-btn {
-    background: none;
-    border: none;
-    color: #888;
-    font-size: 1.2rem;
-    cursor: pointer;
-    padding: 0 0.25rem;
-    margin-left: 0.5rem;
-    opacity: 0;
-    transition: opacity 0.2s, color 0.2s;
-  }
-
-  .league-item:hover .remove-league-btn {
-    opacity: 1;
-  }
-
-  .remove-league-btn:hover {
-    color: #e94560;
   }
 
   .no-data {

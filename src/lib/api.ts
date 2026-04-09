@@ -169,3 +169,9 @@ export async function getTransactions(
   const transactions = response.transactions.transaction;
   return Array.isArray(transactions) ? transactions : [transactions];
 }
+
+export async function getCurrentWeek(): Promise<number> {
+  const url = 'https://api.myfantasyleague.com/fflnetdynamic2026/mfl_status.json';
+  const response = await fetchJSON<{ mfl_status: { weeks: { CurrentWeek: string } } }>(url);
+  return parseInt(response.mfl_status.weeks.CurrentWeek || '1', 10);
+}

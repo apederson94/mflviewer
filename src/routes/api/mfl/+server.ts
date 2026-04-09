@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getMyLeagues, getTransactions, loadPlayerCache } from '$lib/api';
+import { getMyLeagues, getTransactions, loadPlayerCache, getCurrentWeek } from '$lib/api';
 
 export const GET: RequestHandler = async ({ cookies, url }) => {
   const cookie = cookies.get('mfl_cookie');
@@ -27,6 +27,11 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
       case 'players': {
         const players = await loadPlayerCache(cookie);
         return json({ players: Array.from(players.entries()) });
+      }
+      
+      case 'week': {
+        const week = await getCurrentWeek();
+        return json({ week });
       }
       
       default:
