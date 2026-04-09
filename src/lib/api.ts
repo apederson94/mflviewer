@@ -148,7 +148,8 @@ export async function getTransactions(
   leagueId: string,
   cookie?: string,
   transType?: string,
-  days?: number
+  days?: number,
+  week?: number
 ): Promise<MFLTransaction[]> {
   let url = `${BASE_URL}?TYPE=transactions&L=${leagueId}&JSON=1`;
   
@@ -158,6 +159,8 @@ export async function getTransactions(
   
   if (days) {
     url += `&DAYS=${days}`;
+  } else if (week) {
+    url += `&W=${week}`;
   }
   
   const response = await fetchJSON<MFLTransactionsResponse>(url, cookie);
