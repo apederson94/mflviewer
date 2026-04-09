@@ -8,7 +8,49 @@ import type {
 
 import type { MFLLoginResponse } from './types';
 
-const BASE_URL = 'https://api.myfantasyleague.com/2026/export';
+interface YearWeekCache {
+  year: string;
+  week: number;
+  timestamp: number;
+}
+
+let yearWeekCache: YearWeekCache | null = null;
+
+function isCacheValid(cache: YearWeekCache | null): boolean {
+  if (!cache) return false;
+  const now = new Date();
+  const cacheDate = new Date(cache.timestamp);
+  return now.toDateString() === cacheDate.toDateString();
+}
+
+export async function getYearAndWeek(): Promise<{ year: string; week: number }> {
+  if (isCacheValid(yearWeekCache)) {
+    return { year: yearWeekCache!.year, week: yearWeekCache!.week };
+  }
+  const url = 'https://api.myfantasyleague.com/fflnetdynamic2026/mfl_status.json';
+  const response = await fetchJSON<{ mfl_status: { year: string; weeks: { CurrentWeek: string } } }>(url);
+  yearWeekCache = {
+    year: response.mfl_status.year,
+    week: parseInt(response.mfl_status.weeks.CurrentWeek || '1', 10),
+    timestamp: Date.now()
+  };
+  return { year: yearWeekCache.year, week: yearWeekCache.week };
+}
+
+export async function getCurrentYear(): Promise<string> {
+  const { year } = await getYearAndWeek();
+  return year;
+}
+
+export async function getCurrentWeek(): Promise<number> {
+  const { week } = await getYearAndWeek();
+  return week;
+}
+
+export async function getBaseUrl(): Promise<string> {
+  const year = await getCurrentYear();
+  return `https://api.myfantasyleague.com/${year}/export`;
+}
 
 export async function fetchJSON<T>(url: string, cookie?: string): Promise<T> {
   const headers: Record<string, string> = {
@@ -35,9 +77,10 @@ export async function fetchJSON<T>(url: string, cookie?: string): Promise<T> {
 }
 
 export async function login(username: string, password: string): Promise<{ success: boolean; cookie: string }> {
+  const year = await getCurrentYear();
   const encodedUsername = encodeURIComponent(username);
   const encodedPassword = encodeURIComponent(password);
-  const loginUrl = `https://api.myfantasyleague.com/2026/login?USERNAME=${encodedUsername}&PASSWORD=${encodedPassword}&XML=1`;
+  const loginUrl = `https://api.myfantasyleague.com/${year}/login?USERNAME=${encodedUsername}&PASSWORD=${encodedPassword}&XML=1`;
   
   const response = await fetch(loginUrl);
   const text = await response.text();
@@ -64,7 +107,8 @@ export async function login(username: string, password: string): Promise<{ succe
 }
 
 export async function getMyLeagues(cookie?: string): Promise<StoredLeague[]> {
-  let url = `${BASE_URL}?TYPE=myleagues&JSON=1`;
+  const baseUrl = await getBaseUrl();
+  let url = `${baseUrl}?TYPE=myleagues&JSON=1`;
   
   const response = await fetchJSON<MFLMyLeaguesResponse>(url, cookie);
   
@@ -83,7 +127,8 @@ export async function getMyLeagues(cookie?: string): Promise<StoredLeague[]> {
 }
 
 export async function getLeagueById(leagueId: string, cookie?: string): Promise<StoredLeague | null> {
-  const url = `${BASE_URL}?TYPE=league&L=${leagueId}&JSON=1`;
+  const baseUrl = await getBaseUrl();
+  const url = `${baseUrl}?TYPE=league&L=${leagueId}&JSON=1`;
   
   try {
     const response = await fetchJSON<Record<string, unknown>>(url, cookie);
@@ -110,7 +155,8 @@ export async function getLeagueById(leagueId: string, cookie?: string): Promise<
 }
 
 export async function loadPlayerCache(cookie?: string): Promise<Map<string, { name: string; position: string }>> {
-  const url = `${BASE_URL}?TYPE=players&JSON=1`;
+  const baseUrl = await getBaseUrl();
+  const url = `${baseUrl}?TYPE=players&JSON=1`;
   const playerCache = new Map<string, { name: string; position: string }>();
   
   try {
@@ -151,7 +197,8 @@ export async function getTransactions(
   days?: number,
   week?: number
 ): Promise<MFLTransaction[]> {
-  let url = `${BASE_URL}?TYPE=transactions&L=${leagueId}&JSON=1`;
+  const baseUrl = await getBaseUrl();
+  let url = `${baseUrl}?TYPE=transactions&L=${leagueId}&JSON=1`;
   
   if (transType) {
     url += `&TRANS_TYPE=${transType}`;
@@ -171,10 +218,4 @@ export async function getTransactions(
   
   const transactions = response.transactions.transaction;
   return Array.isArray(transactions) ? transactions : [transactions];
-}
-
-export async function getCurrentWeek(): Promise<number> {
-  const url = 'https://api.myfantasyleague.com/fflnetdynamic2026/mfl_status.json';
-  const response = await fetchJSON<{ mfl_status: { weeks: { CurrentWeek: string } } }>(url);
-  return parseInt(response.mfl_status.weeks.CurrentWeek || '1', 10);
 }
