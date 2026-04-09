@@ -16,11 +16,27 @@ interface YearWeekCache {
 
 let yearWeekCache: YearWeekCache | null = null;
 
+interface PlayerCache {
+  players: Map<string, { name: string; position: string }>;
+  timestamp: number;
+}
+
+let playerCache: PlayerCache | null = null;
+
 function isCacheValid(cache: YearWeekCache | null): boolean {
   if (!cache) return false;
   const now = new Date();
   const cacheDate = new Date(cache.timestamp);
   return now.toDateString() === cacheDate.toDateString();
+}
+
+function isPlayerCacheValid(): boolean {
+  if (!playerCache) return false;
+  const now = new Date();
+  const cacheDate = new Date(playerCache.timestamp);
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const cacheDay = new Date(cacheDate.getFullYear(), cacheDate.getMonth(), cacheDate.getDate());
+  return today.getTime() === cacheDay.getTime();
 }
 
 export async function getYearAndWeek(): Promise<{ year: string; week: number }> {
@@ -155,9 +171,13 @@ export async function getLeagueById(leagueId: string, cookie?: string): Promise<
 }
 
 export async function loadPlayerCache(cookie?: string): Promise<Map<string, { name: string; position: string }>> {
+  if (isPlayerCacheValid() && playerCache) {
+    return playerCache.players;
+  }
+
   const baseUrl = await getBaseUrl();
   const url = `${baseUrl}?TYPE=players&JSON=1`;
-  const playerCache = new Map<string, { name: string; position: string }>();
+  const playerCacheMap = new Map<string, { name: string; position: string }>();
   
   try {
     const response = await fetchJSON<MFLPlayersResponse>(url, cookie);
@@ -167,17 +187,22 @@ export async function loadPlayerCache(cookie?: string): Promise<Map<string, { na
         : [response.players.player];
       
       players.forEach(player => {
-        playerCache.set(player.id, {
+        playerCacheMap.set(player.id, {
           name: player.name,
           position: player.position
         });
       });
     }
+    
+    playerCache = {
+      players: playerCacheMap,
+      timestamp: Date.now()
+    };
   } catch (error) {
     console.error('Failed to load player cache:', error);
   }
   
-  return playerCache;
+  return playerCacheMap;
 }
 
 export function getPlayerName(playerCache: Map<string, { name: string; position: string }>, playerId: string): string {
