@@ -1,0 +1,65 @@
+export interface MFLLeague {
+  id: string;
+  name: string;
+}
+
+export interface MFLPlayer {
+  id: string;
+  name: string;
+  position: string;
+  salary?: string;
+  contractYear?: string;
+  cant_add?: string;
+  locked?: string;
+}
+
+export interface MFLTransaction {
+  id: string;
+  type: string;
+  player: string;
+  franchise: string;
+  week: string;
+  bid?: string;
+  drafter?: string;
+  responder?: string;
+  players?: string;
+}
+
+export interface MFLTransactionsResponse {
+  transactions: {
+    transaction: MFLTransaction | MFLTransaction[];
+  };
+}
+
+export interface MFLMyLeague {
+  league_id: string;
+  name: string;
+}
+
+export interface MFLMyLeaguesResponse {
+  leagues: {
+    league: MFLMyLeague | MFLMyLeague[];
+  };
+}
+
+export interface MFLPlayerDBEntry {
+  id: string;
+  name: string;
+  position: string;
+}
+
+export interface MFLPlayersResponse {
+  players: {
+    player: MFLPlayerDBEntry[];
+  };
+}
+
+export interface StoredLeague {
+  id: string;
+  name: string;
+}
+
+export interface MFLLoginResponse {
+  success: boolean;
+  cookie: string;
+}
