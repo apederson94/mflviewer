@@ -11,6 +11,9 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
     return json({ success: false, error: 'Username and password required' }, { status: 400 });
   }
 
+  const secure = process.env.NODE_ENV === 'production';
+  const maxAge = secure ? 60 * 60 * 24 : 60 * 60 * 2;
+
   try {
     const result = await login(username, password);
     
@@ -18,9 +21,9 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
       cookies.set('mfl_cookie', result.cookie, {
         path: '/',
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 60 * 60 * 24 * 30
+        secure,
+        sameSite: 'strict',
+        maxAge
       });
       
       return json({ success: true });

@@ -1,14 +1,14 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import type { PageData } from './$types';
-  import type { StoredLeague, MFLTransaction } from '$lib/types';
+  import type { StoredLeague, MFLTransaction } from '$lib';
 
   let { data }: { data: PageData } = $props();
 
-  let leagues = $state<StoredLeague[]>(data.leagues || []);
+  let leagues = $state(data.leagues ?? []);
   let selectedLeague = $state<StoredLeague | null>(null);
   let transactions = $state<MFLTransaction[]>([]);
-  let playerCache = $state<Map<string, { name: string; position: string }>>(new Map());
+  let playerCache = $state<Record<string, { name: string; position: string }>>({});
   let loading = $state(false);
   let error = $state<string | null>(null);
   let loginUsername = $state('');
@@ -58,11 +58,13 @@
   }
 
   function getPlayerName(playerId: string): string {
+    if (!playerCache) return `Unknown (${playerId})`;
     const player = playerCache.get(playerId);
     return player?.name || `Unknown (${playerId})`;
   }
 
   function getPlayerPosition(playerId: string): string {
+    if (!playerCache) return 'UNK';
     const player = playerCache.get(playerId);
     return player?.position || 'UNK';
   }
