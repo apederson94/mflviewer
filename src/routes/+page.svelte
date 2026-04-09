@@ -125,7 +125,7 @@
 
 <div class="app">
   <header class="header">
-    <h1>MFL Transaction Viewer</h1>
+    <h1>MFL Transaction Viewer <span class="week">Week {data.week}</span></h1>
     {#if isLoggedIn}
       <button onclick={handleLogout} class="login-btn">Logout</button>
     {:else}
@@ -238,6 +238,12 @@
     margin: 0;
     font-size: 1.5rem;
     color: #fff;
+  }
+
+  .header h1 .week {
+    font-size: 0.9rem;
+    color: #e94560;
+    font-weight: normal;
   }
 
   .login-form {
