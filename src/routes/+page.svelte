@@ -125,58 +125,68 @@
 
 <div class="app">
   <header class="header">
-    <h1>MFL Transaction Viewer <span class="week">Week {data.week}</span></h1>
-    {#if isLoggedIn}
-      <button onclick={handleLogout} class="login-btn">Logout</button>
-    {:else}
-      <form class="login-form" onsubmit={handleLogin}>
-        <input
-          type="text"
-          placeholder="Username"
-          bind:value={loginUsername}
-        />
-        <input
-          type="password"
-          placeholder="Password"
-          bind:value={loginPassword}
-        />
-        <button type="submit" disabled={formLoading}>
-          Login
-        </button>
-      </form>
-    {/if}
+    <div class="title-row">
+      <h1>MFL Transaction Viewer <span class="week">Week {data.week}</span></h1>
+    </div>
+    <div class="auth-row">
+      {#if isLoggedIn}
+        <button onclick={handleLogout} class="login-btn">Logout</button>
+      {:else}
+        <form class="login-form" onsubmit={handleLogin}>
+          <input
+            type="text"
+            placeholder="Username"
+            bind:value={loginUsername}
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            bind:value={loginPassword}
+          />
+          <button type="submit" disabled={formLoading}>
+            Login
+          </button>
+        </form>
+      {/if}
+    </div>
   </header>
   
   <div class="main-content">
     <aside class="sidebar">
-      <h2>My Leagues</h2>
+      <div class="sidebar-content">
+        <h2>My Leagues</h2>
+        
+        {#if !isLoggedIn}
+          <p class="login-prompt">Log in to view your leagues</p>
+        {/if}
+        
+        <ul class="league-list">
+          {#each leagues as league (league.id)}
+            <li
+              class="league-item {selectedLeague?.id === league.id ? 'active' : ''}"
+              onclick={() => handleSelectLeague(league)}
+              role="button"
+              tabindex="0"
+              onkeydown={(e) => e.key === 'Enter' && handleSelectLeague(league)}
+            >
+              <span class="league-name">{league.name}</span>
+              <span class="league-id">{league.id}</span>
+            </li>
+          {/each}
+        </ul>
+        
+        {#if leagues.length === 0 && isLoggedIn}
+          <p class="no-data">No leagues found</p>
+        {/if}
+        
+        {#if !isLoggedIn}
+          <p class="no-data">Log in to view your leagues</p>
+        {/if}
+      </div>
       
-      {#if !isLoggedIn}
-        <p class="login-prompt">Log in to view your leagues</p>
-      {/if}
-      
-      <ul class="league-list">
-        {#each leagues as league (league.id)}
-          <li
-            class="league-item {selectedLeague?.id === league.id ? 'active' : ''}"
-            onclick={() => handleSelectLeague(league)}
-            role="button"
-            tabindex="0"
-            onkeydown={(e) => e.key === 'Enter' && handleSelectLeague(league)}
-          >
-            <span class="league-name">{league.name}</span>
-            <span class="league-id">{league.id}</span>
-          </li>
-        {/each}
-      </ul>
-      
-      {#if leagues.length === 0 && isLoggedIn}
-        <p class="no-data">No leagues found</p>
-      {/if}
-      
-      {#if !isLoggedIn}
-        <p class="no-data">Log in to view your leagues</p>
-      {/if}
+      <a href="https://github.com/apederson94/mflviewer" target="_blank" rel="noopener noreferrer" class="github-stars">
+        <img src="https://img.shields.io/github/stars/apederson94/mflviewer?style=social" alt="GitHub Stars">
+      </a>
     </aside>
     
     <main class="content">
@@ -233,17 +243,44 @@
     background: #16213e;
     border-bottom: 1px solid #0f3460;
   }
-
-  .header h1 {
+  
+.title-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  
+  .title-row h1 {
     margin: 0;
     font-size: 1.5rem;
     color: #fff;
+    vertical-align: middle;
   }
-
-  .header h1 .week {
+  
+  .title-row .week {
+    margin-left: 0.5rem;
     font-size: 0.9rem;
     color: #e94560;
     font-weight: normal;
+    vertical-align: middle;
+  }
+  
+  .title-row .github-stars {
+    vertical-align: middle;
+  }
+  
+  .title-row .github-stars img {
+    height: 1.2rem;
+  }
+  
+.auth-row {
+    display: flex;
+    align-items: center;
+  }
+  
+  .github-stars img {
+    height: 20px;
+    width: auto;
   }
 
   .login-form {
@@ -295,9 +332,20 @@
     background: #16213e;
     border-right: 1px solid #0f3460;
     padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  
+.sidebar-content {
+    flex: 1;
     overflow-y: auto;
   }
-
+  
+  .sidebar .github-stars {
+    text-align: right;
+  }
+ 
   .sidebar h2 {
     margin: 0 0 1rem 0;
     font-size: 1.2rem;
