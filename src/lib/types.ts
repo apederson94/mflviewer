@@ -35,6 +35,7 @@ export interface MFLTransaction {
   franchise2?: string;
   timestamp?: string;
   expires?: string;
+  formattedTime?: string;
 }
 
 export interface MFLTransactionsResponse {

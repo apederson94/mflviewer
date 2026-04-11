@@ -210,11 +210,12 @@
                     {/if}
                   </div>
                 {/if}
-                {#if transaction.type !== 'TRADE'}
-                  <div class="transaction-footer">
+                <div class="transaction-footer">
+                  {#if transaction.type !== 'TRADE'}
                     <span class="transaction-franchise">By: {transaction.franchiseName || transaction.franchise}</span>
-                  </div>
-                {/if}
+                  {/if}
+                  <span class="transaction-time">{transaction.formattedTime}</span>
+                </div>
               </div>
             {/each}
           </div>
@@ -495,6 +496,12 @@
     border-top: 1px solid #0f3460;
     color: #888;
     font-size: 0.85rem;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .transaction-time {
+    color: #666;
   }
 
   .trade-header {

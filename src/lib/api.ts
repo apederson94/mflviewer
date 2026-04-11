@@ -296,6 +296,19 @@ export function formatDraftPick(pickId: string, currentYear?: string): string {
   return pickId;
 }
 
+export function formatTimestamp(timestamp: string): string {
+  if (!timestamp) return '';
+  const date = new Date(parseInt(timestamp, 10) * 1000);
+  return date.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  });
+}
+
 export async function getTransactions(
   leagueId: string,
   cookie?: string,

@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getMyLeagues, getTransactions, loadPlayerCache, getCurrentWeek, getCurrentYear, getPlayerName, getLeagueFull, getFranchiseName, formatDraftPick, MFL_COOKIE_NAME } from '$lib/api';
+import { getMyLeagues, getTransactions, loadPlayerCache, getCurrentWeek, getCurrentYear, getPlayerName, getLeagueFull, getFranchiseName, formatDraftPick, formatTimestamp, MFL_COOKIE_NAME } from '$lib/api';
 import type { MFLTransaction } from '$lib/types';
 
 function extractPlayerIds(t: MFLTransaction): string[] {
@@ -74,6 +74,7 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
 
             const tradePartnerId = t.franchise === t.franchise ? t.franchise2 : t.franchise;
             const tradePartnerName = getFranchiseName(franchiseMap, tradePartnerId || t.franchise2 || '');
+            const formattedTime = t.timestamp ? formatTimestamp(t.timestamp) : '';
 
             return {
               ...t,
@@ -82,18 +83,21 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
               franchiseName,
               tradePartnerName: t.franchise2 ? getFranchiseName(franchiseMap, t.franchise2) : undefined,
               tradeGives: f1Names,
-              tradeReceives: f2Names
+              tradeReceives: f2Names,
+              formattedTime
             };
           }
           
           // FREE_AGENT or other
           const playerIds = extractPlayerIds(t);
           const names = playerIds.map(id => getPlayerName(players, id));
+          const formattedTime = t.timestamp ? formatTimestamp(t.timestamp) : '';
           return {
             ...t,
             playerNames: names,
             playerName: names.length > 0 ? names.join(', ') : undefined,
-            franchiseName
+            franchiseName,
+            formattedTime
           };
         });
         return json({ transactions: transactionsWithNames });
