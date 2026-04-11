@@ -8,7 +8,7 @@
   let leagues = $state(data.leagues ?? []);
   let selectedLeague = $state<StoredLeague | null>(null);
   let transactions = $state<MFLTransaction[]>([]);
-  let playerCache = $state<Map<string, { name: string; position: string }>>(new Map());
+  let playerCache = $state(new Map((data.players || []) as [string, { name: string; position: string }][]));
   let loading = $state(false);
   let error = $state<string | null>(null);
   let loginUsername = $state('');
@@ -16,24 +16,6 @@
   let formLoading = $state(false);
 
   let isLoggedIn = $derived(data.loggedIn);
-
-  onMount(async () => {
-    await loadPlayerCache();
-  });
-
-  
-
-  async function loadPlayerCache() {
-    try {
-      const res = await fetch('/api/mfl?type=players');
-      const data = await res.json();
-      if (data.players) {
-        playerCache = new Map(data.players as [string, { name: string; position: string }][]);
-      }
-    } catch (err) {
-      console.error('Failed to load player cache:', err);
-    }
-  }
 
   async function loadTransactions(leagueId: string) {
     loading = true;
