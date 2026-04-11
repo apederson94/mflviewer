@@ -14,15 +14,21 @@ export interface MFLPlayer {
 }
 
 export interface MFLTransaction {
-  id: string;
+  id?: string;
   type: string;
-  player: string;
+  player?: string;
   franchise: string;
-  week: string;
+  week?: string;
   bid?: string;
   drafter?: string;
   responder?: string;
   players?: string;
+  playerName?: string;
+  transaction?: string;
+  franchise1_gave_up?: string;
+  franchise2_gave_up?: string;
+  timestamp?: string;
+  expires?: string;
 }
 
 export interface MFLTransactionsResponse {

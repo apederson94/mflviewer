@@ -203,7 +203,7 @@
                   <span class="transaction-week">Week {transaction.week}</span>
                 </div>
                 <div class="transaction-body">
-                  <span>Player: {getPlayerName(transaction.player)}</span>
+                  <span>Player: {transaction.playerName || getPlayerName(transaction.player)}</span>
                   {#if transaction.bid}
                     <span>Bid: ${transaction.bid}</span>
                   {/if}

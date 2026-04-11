@@ -1,6 +1,36 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getMyLeagues, getTransactions, loadPlayerCache, getCurrentWeek } from '$lib/api';
+import { getMyLeagues, getTransactions, loadPlayerCache, getCurrentWeek, getPlayerName } from '$lib/api';
+import type { MFLTransaction } from '$lib/types';
+
+function extractPlayerIds(t: MFLTransaction): string[] {
+  const players: string[] = [];
+  
+  if (t.type === 'FREE_AGENT' && t.transaction) {
+    const ids = t.transaction.split(',');
+    for (const id of ids) {
+      const cleaned = id.replace('|', '').trim();
+      if (cleaned.length > 0) {
+        players.push(cleaned);
+      }
+    }
+  }
+  
+  if (t.type === 'TRADE') {
+    if (t.franchise1_gave_up) {
+      for (const id of t.franchise1_gave_up.split(',')) {
+        if (id.trim()) players.push(id.trim());
+      }
+    }
+    if (t.franchise2_gave_up) {
+      for (const id of t.franchise2_gave_up.split(',')) {
+        if (id.trim()) players.push(id.trim());
+      }
+    }
+  }
+  
+  return players;
+}
 
 export const GET: RequestHandler = async ({ cookies, url }) => {
   const cookie = cookies.get('mfl_cookie');
@@ -22,7 +52,16 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
         }
         const currentWeek = await getCurrentWeek();
         const transactions = await getTransactions(leagueId, cookie, transType, days, currentWeek);
-        return json({ transactions });
+        const players = await loadPlayerCache(cookie);
+        const transactionsWithPlayerNames = transactions.map(t => {
+          const playerIds = extractPlayerIds(t);
+          const names = playerIds.map(id => getPlayerName(players, id));
+          return {
+            ...t,
+            playerName: names.length > 0 ? names.join(', ') : undefined
+          };
+        });
+        return json({ transactions: transactionsWithPlayerNames });
       }
       
       case 'players': {
