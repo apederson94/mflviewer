@@ -3,6 +3,15 @@ import type { RequestHandler } from './$types';
 import { getMyLeagues, getTransactions, loadPlayerCache, getCurrentWeek, getCurrentYear, getPlayerName, getLeagueFull, getFranchiseName, formatDraftPick, formatTimestamp, MFL_COOKIE_NAME } from '$lib/api';
 import type { MFLTransaction } from '$lib/types';
 
+function getTransactionDisplayName(type: string): string {
+  switch (type) {
+    case 'FREE_AGENT': return 'Add/Drop';
+    case 'TRADE': return 'Trade';
+    case 'WAIVER': return 'Waiver';
+    default: return type;
+  }
+}
+
 function extractPlayerIds(t: MFLTransaction): string[] {
   const players: string[] = [];
   
@@ -77,6 +86,7 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
 
             return {
               ...t,
+              type: getTransactionDisplayName(t.type),
               playerNames: [...f1Names, ...f2Names],
               playerName: [...f1Names, ...f2Names].join(', '),
               franchiseName,
@@ -93,6 +103,7 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
           const formattedTime = t.timestamp ? formatTimestamp(t.timestamp) : '';
           return {
             ...t,
+            type: getTransactionDisplayName(t.type),
             playerNames: names,
             playerName: names.length > 0 ? names.join(', ') : undefined,
             franchiseName,
