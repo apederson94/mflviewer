@@ -10,6 +10,8 @@ import type {
 
 import type { MFLLoginResponse } from './types';
 
+export const MFL_COOKIE_NAME = 'mfl_cookie';
+
 function toArray<T>(item: T | T[]): T[] {
   return Array.isArray(item) ? item : [item];
 }

@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { login } from '$lib/api';
+import { login, MFL_COOKIE_NAME } from '$lib/api';
 
 export const POST: RequestHandler = async ({ request, cookies }) => {
   const formData = await request.formData();
@@ -18,7 +18,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
     const result = await login(username, password);
     
     if (result.success) {
-      cookies.set('mfl_cookie', result.cookie, {
+      cookies.set(MFL_COOKIE_NAME, result.cookie, {
         path: '/',
         httpOnly: true,
         secure,

@@ -1,8 +1,8 @@
 import type { PageServerLoad } from './$types';
-import { getMyLeagues, getCurrentWeek, loadPlayerCache } from '$lib/api';
+import { getMyLeagues, getCurrentWeek, loadPlayerCache, MFL_COOKIE_NAME } from '$lib/api';
 
 export const load: PageServerLoad = async ({ cookies }) => {
-  const cookie = cookies.get('mfl_cookie');
+  const cookie = cookies.get(MFL_COOKIE_NAME);
   const week = await getCurrentWeek();
   
   if (!cookie) {

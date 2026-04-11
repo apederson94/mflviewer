@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getMyLeagues, getTransactions, loadPlayerCache, getCurrentWeek, getPlayerName, getLeagueFull, getFranchiseName } from '$lib/api';
+import { getMyLeagues, getTransactions, loadPlayerCache, getCurrentWeek, getPlayerName, getLeagueFull, getFranchiseName, MFL_COOKIE_NAME } from '$lib/api';
 import type { MFLTransaction } from '$lib/types';
 
 function extractPlayerIds(t: MFLTransaction): string[] {
@@ -33,7 +33,7 @@ function extractPlayerIds(t: MFLTransaction): string[] {
 }
 
 export const GET: RequestHandler = async ({ cookies, url }) => {
-  const cookie = cookies.get('mfl_cookie');
+  const cookie = cookies.get(MFL_COOKIE_NAME);
   const type = url.searchParams.get('type');
   const leagueId = url.searchParams.get('league');
   const transType = url.searchParams.get('transType') || undefined;
