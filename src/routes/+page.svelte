@@ -135,6 +135,10 @@
       <div class="sidebar-content">
         <h2>My Leagues</h2>
         
+        {#if data.error}
+          <p class="error">{data.error}</p>
+        {/if}
+        
         {#if !isLoggedIn}
           <p class="login-prompt">Log in to view your leagues</p>
         {/if}
@@ -154,7 +158,7 @@
           {/each}
         </ul>
         
-        {#if leagues.length === 0 && isLoggedIn}
+        {#if leagues.length === 0 && isLoggedIn && !data.error}
           <p class="no-data">No leagues found</p>
         {/if}
         
