@@ -202,20 +202,23 @@
                       <span>{transaction.tradeReceives?.join(', ') || 'None'}</span>
                     </div>
                   </div>
+                  <div class="transaction-footer">
+                    <span class="transaction-time">{transaction.formattedTime}</span>
+                  </div>
                 {:else}
-                  <div class="transaction-body">
-                    <span class="transaction-player">Player: {transaction.playerName || getPlayerName(transaction.player)}</span>
+                  <div class="fa-header">
+                    <span class="fa-type">{transaction.type}</span>
+                    <span class="fa-week">Week {transaction.week}</span>
+                  </div>
+                  <div class="fa-franchise">{transaction.franchiseName}</div>
+                  <div class="fa-player">
+                    {transaction.playerName || getPlayerName(transaction.player)}
                     {#if transaction.bid}
-                      <span>Bid: ${transaction.bid}</span>
+                      <span class="fa-bid">Bid: ${transaction.bid}</span>
                     {/if}
                   </div>
+                  <div class="fa-time">{transaction.formattedTime}</div>
                 {/if}
-                <div class="transaction-footer">
-                  {#if transaction.type !== 'TRADE'}
-                    <span class="transaction-franchise">By: {transaction.franchiseName || transaction.franchise}</span>
-                  {/if}
-                  <span class="transaction-time">{transaction.formattedTime}</span>
-                </div>
               </div>
             {/each}
           </div>
@@ -502,6 +505,47 @@
 
   .transaction-time {
     color: #666;
+    margin-top: 0.5rem;
+  }
+
+  .fa-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    color: #888;
+    margin-bottom: 0.25rem;
+  }
+
+  .fa-type {
+    color: #e94560;
+    font-weight: 600;
+  }
+
+  .fa-week {
+    color: #888;
+  }
+
+  .fa-franchise {
+    font-weight: 600;
+    font-size: 1rem;
+    padding: 0.25rem 0;
+  }
+
+  .fa-player {
+    font-size: 0.95rem;
+    padding: 0.25rem 0;
+  }
+
+  .fa-bid {
+    color: #e94560;
+    margin-left: 0.5rem;
+  }
+
+  .fa-time {
+    color: #666;
+    font-size: 0.85rem;
+    text-align: right;
+    margin-top: 0.5rem;
   }
 
   .trade-header {
