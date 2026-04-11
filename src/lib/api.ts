@@ -276,6 +276,16 @@ export function getFranchiseName(franchiseCache: Map<string, string>, franchiseI
   return franchiseCache.get(franchiseId) || `Franchise ${franchiseId}`;
 }
 
+export function formatDraftPick(pickId: string): string {
+  const match = pickId.match(/^FP_(\d{4})_(\d{4})_(\d+)$/);
+  if (match) {
+    const [, , year, round] = match;
+    const roundStr = round === '1' ? '1st' : round === '2' ? '2nd' : round === '3' ? '3rd' : `${round}th`;
+    return `${year} ${roundStr} Round Pick`;
+  }
+  return pickId;
+}
+
 export async function getTransactions(
   leagueId: string,
   cookie?: string,

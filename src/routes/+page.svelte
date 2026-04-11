@@ -188,12 +188,30 @@
                   <span class="transaction-type">{transaction.type}</span>
                   <span class="transaction-week">Week {transaction.week}</span>
                 </div>
-                <div class="transaction-body">
-                  <span class="transaction-player">Player: {transaction.playerName || getPlayerName(transaction.player)}</span>
+                {#if transaction.type === 'TRADE' && transaction.tradePartnerName}
+                  <div class="trade-details">
+                    <span class="trade-partner">Trade with {transaction.tradePartnerName}</span>
+                  </div>
+                  <div class="trade-sides">
+                    <div class="trade-gives">
+                      <span class="trade-label">Gives:</span>
+                      <span>{transaction.tradeGives?.join(', ') || 'None'}</span>
+                    </div>
+                    <div class="trade-receives">
+                      <span class="trade-label">Receives:</span>
+                      <span>{transaction.tradeReceives?.join(', ') || 'None'}</span>
+                    </div>
+                  </div>
+                {:else}
+                  <div class="transaction-body">
+                    <span class="transaction-player">Player: {transaction.playerName || getPlayerName(transaction.player)}</span>
+                    {#if transaction.bid}
+                      <span>Bid: ${transaction.bid}</span>
+                    {/if}
+                  </div>
+                {/if}
+                <div class="transaction-footer">
                   <span class="transaction-franchise">By: {transaction.franchiseName || transaction.franchise}</span>
-                  {#if transaction.bid}
-                    <span>Bid: ${transaction.bid}</span>
-                  {/if}
                 </div>
               </div>
             {/each}
@@ -467,6 +485,44 @@
 
   .transaction-franchise {
     color: #e94560;
+  }
+
+  .transaction-footer {
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid #0f3460;
+    color: #888;
+    font-size: 0.85rem;
+  }
+
+  .trade-details {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #0f3460;
+    margin-bottom: 0.5rem;
+  }
+
+  .trade-partner {
+    color: #e94560;
+    font-weight: 600;
+    font-size: 1rem;
+  }
+
+  .trade-sides {
+    display: flex;
+    gap: 1.5rem;
+    color: #fff;
+    font-size: 0.9rem;
+  }
+
+  .trade-gives, .trade-receives {
+    flex: 1;
+  }
+
+  .trade-label {
+    display: block;
+    color: #888;
+    font-size: 0.8rem;
+    margin-bottom: 0.25rem;
   }
 
   @media (max-width: 768px) {

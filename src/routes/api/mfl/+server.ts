@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getMyLeagues, getTransactions, loadPlayerCache, getCurrentWeek, getPlayerName, getLeagueFull, getFranchiseName, MFL_COOKIE_NAME } from '$lib/api';
+import { getMyLeagues, getTransactions, loadPlayerCache, getCurrentWeek, getPlayerName, getLeagueFull, getFranchiseName, formatDraftPick, MFL_COOKIE_NAME } from '$lib/api';
 import type { MFLTransaction } from '$lib/types';
 
 function extractPlayerIds(t: MFLTransaction): string[] {
@@ -56,11 +56,41 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
         const league = await getLeagueFull(leagueId, cookie);
         const franchiseMap = league?.franchises || new Map<string, string>();
         const transactionsWithNames = transactions.map(t => {
+          const franchiseName = getFranchiseName(franchiseMap, t.franchise);
+          
+          if (t.type === 'TRADE') {
+            const f1Gave = t.franchise1_gave_up?.split(',').filter(Boolean) || [];
+            const f2Gave = t.franchise2_gave_up?.split(',').filter(Boolean) || [];
+            
+            const f1Names = f1Gave.map(id => {
+              if (id.startsWith('FP_')) return formatDraftPick(id.trim());
+              return getPlayerName(players, id.trim());
+            });
+            const f2Names = f2Gave.map(id => {
+              if (id.startsWith('FP_')) return formatDraftPick(id.trim());
+              return getPlayerName(players, id.trim());
+            });
+
+            const tradePartnerId = t.franchise === t.franchise ? t.franchise2 : t.franchise;
+            const tradePartnerName = getFranchiseName(franchiseMap, tradePartnerId || t.franchise2 || '');
+
+            return {
+              ...t,
+              playerNames: [...f1Names, ...f2Names],
+              playerName: [...f1Names, ...f2Names].join(', '),
+              franchiseName,
+              tradePartnerName: t.franchise2 ? getFranchiseName(franchiseMap, t.franchise2) : undefined,
+              tradeGives: f1Names,
+              tradeReceives: f2Names
+            };
+          }
+          
+          // FREE_AGENT or other
           const playerIds = extractPlayerIds(t);
           const names = playerIds.map(id => getPlayerName(players, id));
-          const franchiseName = getFranchiseName(franchiseMap, t.franchise);
           return {
             ...t,
+            playerNames: names,
             playerName: names.length > 0 ? names.join(', ') : undefined,
             franchiseName
           };

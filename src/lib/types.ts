@@ -24,10 +24,15 @@ export interface MFLTransaction {
   responder?: string;
   players?: string;
   playerName?: string;
+  playerNames?: string[];
   franchiseName?: string;
+  tradePartnerName?: string;
+  tradeGives?: string[];
+  tradeReceives?: string[];
   transaction?: string;
   franchise1_gave_up?: string;
   franchise2_gave_up?: string;
+  franchise2?: string;
   timestamp?: string;
   expires?: string;
 }
