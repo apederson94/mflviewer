@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getMyLeagues, getTransactions, loadPlayerCache, getCurrentWeek, getPlayerName, getLeagueFull, getFranchiseName, formatDraftPick, MFL_COOKIE_NAME } from '$lib/api';
+import { getMyLeagues, getTransactions, loadPlayerCache, getCurrentWeek, getCurrentYear, getPlayerName, getLeagueFull, getFranchiseName, formatDraftPick, MFL_COOKIE_NAME } from '$lib/api';
 import type { MFLTransaction } from '$lib/types';
 
 function extractPlayerIds(t: MFLTransaction): string[] {
@@ -51,6 +51,7 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
           return json({ error: 'League ID required' }, { status: 400 });
         }
         const currentWeek = await getCurrentWeek();
+        const currentYear = await getCurrentYear();
         const transactions = await getTransactions(leagueId, cookie, transType, days, currentWeek);
         const players = await loadPlayerCache(cookie);
         const league = await getLeagueFull(leagueId, cookie);
@@ -63,11 +64,11 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
             const f2Gave = t.franchise2_gave_up?.split(',').filter(Boolean) || [];
             
             const f1Names = f1Gave.map(id => {
-              if (id.startsWith('FP_')) return formatDraftPick(id.trim());
+              if (id.startsWith('FP_') || id.startsWith('DP_')) return formatDraftPick(id.trim(), currentYear);
               return getPlayerName(players, id.trim());
             });
             const f2Names = f2Gave.map(id => {
-              if (id.startsWith('FP_')) return formatDraftPick(id.trim());
+              if (id.startsWith('FP_') || id.startsWith('DP_')) return formatDraftPick(id.trim(), currentYear);
               return getPlayerName(players, id.trim());
             });
 

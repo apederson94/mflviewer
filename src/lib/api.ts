@@ -276,13 +276,25 @@ export function getFranchiseName(franchiseCache: Map<string, string>, franchiseI
   return franchiseCache.get(franchiseId) || `Franchise ${franchiseId}`;
 }
 
-export function formatDraftPick(pickId: string): string {
-  const match = pickId.match(/^FP_(\d{4})_(\d{4})_(\d+)$/);
-  if (match) {
-    const [, , year, round] = match;
+export function formatDraftPick(pickId: string, currentYear?: string): string {
+  const currentYr = currentYear || new Date().getFullYear().toString();
+  
+  const fpMatch = pickId.match(/^FP_(\d{4})_(\d{4})_(\d+)$/);
+  if (fpMatch) {
+    const [, , year, round] = fpMatch;
     const roundStr = round === '1' ? '1st' : round === '2' ? '2nd' : round === '3' ? '3rd' : `${round}th`;
     return `${year} ${roundStr} Round Pick`;
   }
+  
+  const dpMatch = pickId.match(/^DP_(\d+)_(\d+)$/);
+  if (dpMatch) {
+    const [, , round, pick] = dpMatch;
+    const roundNum = parseInt(round, 10) + 1;
+    const pickNum = parseInt(pick, 10) + 1;
+    const roundStr = roundNum === 1 ? '1st' : roundNum === 2 ? '2nd' : roundNum === 3 ? '3rd' : `${roundNum}th`;
+    return `${currentYr} Draft Pick ${roundNum}.${pickNum.toString().padStart(2, '0')}`;
+  }
+  
   return pickId;
 }
 

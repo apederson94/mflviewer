@@ -188,17 +188,17 @@
                   <span class="transaction-type">{transaction.type}</span>
                   <span class="transaction-week">Week {transaction.week}</span>
                 </div>
-                {#if transaction.type === 'TRADE' && transaction.tradePartnerName}
-                  <div class="trade-details">
-                    <span class="trade-partner">Trade with {transaction.tradePartnerName}</span>
+                {#if transaction.type === 'TRADE' && transaction.tradeGives && transaction.tradeReceives}
+                  <div class="trade-header">
+                    <span>{transaction.franchiseName}</span>
+                    <span class="trade-arrow">→</span>
+                    <span>{transaction.tradePartnerName}</span>
                   </div>
                   <div class="trade-sides">
-                    <div class="trade-gives">
-                      <span class="trade-label">Gives:</span>
+                    <div class="trade-side">
                       <span>{transaction.tradeGives?.join(', ') || 'None'}</span>
                     </div>
-                    <div class="trade-receives">
-                      <span class="trade-label">Receives:</span>
+                    <div class="trade-side">
                       <span>{transaction.tradeReceives?.join(', ') || 'None'}</span>
                     </div>
                   </div>
@@ -210,9 +210,11 @@
                     {/if}
                   </div>
                 {/if}
-                <div class="transaction-footer">
-                  <span class="transaction-franchise">By: {transaction.franchiseName || transaction.franchise}</span>
-                </div>
+                {#if transaction.type !== 'TRADE'}
+                  <div class="transaction-footer">
+                    <span class="transaction-franchise">By: {transaction.franchiseName || transaction.franchise}</span>
+                  </div>
+                {/if}
               </div>
             {/each}
           </div>
@@ -495,34 +497,35 @@
     font-size: 0.85rem;
   }
 
-  .trade-details {
+  .trade-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
     padding: 0.5rem 0;
     border-bottom: 1px solid #0f3460;
     margin-bottom: 0.5rem;
-  }
-
-  .trade-partner {
-    color: #e94560;
     font-weight: 600;
     font-size: 1rem;
   }
 
+  .trade-arrow {
+    color: #e94560;
+    font-size: 1.25rem;
+  }
+
   .trade-sides {
     display: flex;
-    gap: 1.5rem;
+    gap: 1rem;
     color: #fff;
     font-size: 0.9rem;
   }
 
-  .trade-gives, .trade-receives {
+  .trade-side {
     flex: 1;
-  }
-
-  .trade-label {
-    display: block;
-    color: #888;
-    font-size: 0.8rem;
-    margin-bottom: 0.25rem;
+    padding: 0.5rem;
+    background: #1a1a2e;
+    border-radius: 4px;
+    text-align: center;
   }
 
   @media (max-width: 768px) {
