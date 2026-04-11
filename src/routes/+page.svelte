@@ -21,11 +21,7 @@
     await loadPlayerCache();
   });
 
-  $effect(() => {
-    if (selectedLeague) {
-      loadTransactions(selectedLeague.id);
-    }
-  });
+  
 
   async function loadPlayerCache() {
     try {
@@ -114,6 +110,7 @@
 
   function handleSelectLeague(league: StoredLeague) {
     selectedLeague = league;
+    loadTransactions(league.id);
   }
 
   
@@ -199,7 +196,7 @@
           <div class="loading">Loading transactions...</div>
         {:else if transactions.length > 0}
           <div class="transactions-list">
-            {#each transactions as transaction (transaction.id)}
+            {#each transactions as transaction, i (`${transaction.id ?? i}-${transaction.week ?? i}-${transaction.type ?? i}`)}
               <div class="transaction-card">
                 <div class="transaction-header">
                   <span class="transaction-type">{transaction.type}</span>
