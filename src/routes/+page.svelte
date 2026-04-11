@@ -203,7 +203,8 @@
                   <span class="transaction-week">Week {transaction.week}</span>
                 </div>
                 <div class="transaction-body">
-                  <span>Player: {transaction.playerName || getPlayerName(transaction.player)}</span>
+                  <span class="transaction-player">Player: {transaction.playerName || getPlayerName(transaction.player)}</span>
+                  <span class="transaction-franchise">By: {transaction.franchiseName || transaction.franchise}</span>
                   {#if transaction.bid}
                     <span>Bid: ${transaction.bid}</span>
                   {/if}
@@ -457,9 +458,20 @@
 
   .transaction-body {
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
+    gap: 0.5rem;
     color: #fff;
     font-size: 0.9rem;
+  }
+
+  .transaction-player {
+    flex: 1;
+    min-width: 200px;
+  }
+
+  .transaction-franchise {
+    color: #e94560;
   }
 
   @media (max-width: 768px) {

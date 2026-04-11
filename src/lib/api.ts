@@ -3,7 +3,9 @@ import type {
   MFLTransaction,
   MFLMyLeaguesResponse,
   MFLPlayersResponse,
-  StoredLeague
+  StoredLeague,
+  MFLFranchise,
+  MFLLeagueResponse
 } from './types';
 
 import type { MFLLoginResponse } from './types';
@@ -179,6 +181,31 @@ export async function getLeagueById(leagueId: string, cookie?: string): Promise<
   }
 }
 
+export async function getLeagueFranchises(leagueId: string, cookie?: string): Promise<Map<string, string>> {
+  const baseUrl = await getBaseUrl();
+  const url = `${baseUrl}?TYPE=league&L=${leagueId}&JSON=1`;
+  
+  const franchiseMap = new Map<string, string>();
+  
+  try {
+    const response = await fetchJSON<MFLLeagueResponse>(url, cookie);
+    if (response.league?.franchises?.franchise) {
+      const franchises = Array.isArray(response.league.franchises.franchise)
+        ? response.league.franchises.franchise
+        : [response.league.franchises.franchise];
+      
+      franchises.forEach(franchise => {
+        franchiseMap.set(franchise.id, franchise.name);
+      });
+    }
+    console.log(`Fetched ${franchiseMap.size} franchises for league ${leagueId}`);
+  } catch (error) {
+    console.error(`Fetch franchises for league ${leagueId} failed: ${error}`);
+  }
+  
+  return franchiseMap;
+}
+
 export async function loadPlayerCache(cookie?: string): Promise<Map<string, { name: string; position: string }>> {
   if (isPlayerCacheValid() && playerCache) {
     return playerCache.players;
@@ -227,6 +254,10 @@ export function getPlayerName(playerCache: Map<string, { name: string; position:
 export function getPlayerPosition(playerCache: Map<string, { name: string; position: string }>, playerId: string): string {
   const player = playerCache.get(playerId);
   return player?.position || 'UNK';
+}
+
+export function getFranchiseName(franchiseCache: Map<string, string>, franchiseId: string): string {
+  return franchiseCache.get(franchiseId) || `Franchise ${franchiseId}`;
 }
 
 export async function getTransactions(

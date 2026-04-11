@@ -24,6 +24,7 @@ export interface MFLTransaction {
   responder?: string;
   players?: string;
   playerName?: string;
+  franchiseName?: string;
   transaction?: string;
   franchise1_gave_up?: string;
   franchise2_gave_up?: string;
@@ -63,6 +64,19 @@ export interface MFLPlayersResponse {
 export interface StoredLeague {
   id: string;
   name: string;
+}
+
+export interface MFLFranchise {
+  id: string;
+  name: string;
+}
+
+export interface MFLLeagueResponse {
+  league: {
+    franchises?: {
+      franchise: MFLFranchise | MFLFranchise[];
+    };
+  };
 }
 
 export interface MFLLoginResponse {
