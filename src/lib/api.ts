@@ -126,28 +126,36 @@ export async function getMyLeagues(cookie?: string): Promise<StoredLeague[]> {
   const baseUrl = await getBaseUrl();
   let url = `${baseUrl}?TYPE=myleagues&JSON=1`;
   
-  const response = await fetchJSON<MFLMyLeaguesResponse>(url, cookie);
+  console.log(`Fetching leagues, cookie present: ${!!cookie}`);
   
-  if (!response.leagues?.league) {
-    return [];
+  try {
+    const response = await fetchJSON<MFLMyLeaguesResponse>(url, cookie);
+    const leagues = response.leagues?.league ? (Array.isArray(response.leagues.league)
+      ? response.leagues.league
+      : [response.leagues.league]) : [];
+    
+    console.log(`Fetched ${leagues.length} leagues, success: true`);
+    
+    return leagues.map(league => ({
+      id: league.league_id,
+      name: league.name
+    }));
+  } catch (error) {
+    console.error(`Fetch leagues failed: ${error}`);
+    throw error;
   }
-  
-  const leagues = Array.isArray(response.leagues.league)
-    ? response.leagues.league
-    : [response.leagues.league];
-  
-  return leagues.map(league => ({
-    id: league.league_id,
-    name: league.name
-  }));
 }
 
 export async function getLeagueById(leagueId: string, cookie?: string): Promise<StoredLeague | null> {
   const baseUrl = await getBaseUrl();
   const url = `${baseUrl}?TYPE=league&L=${leagueId}&JSON=1`;
   
+  console.log(`Fetching league ${leagueId}`);
+  
   try {
     const response = await fetchJSON<Record<string, unknown>>(url, cookie);
+    const payloadSize = JSON.stringify(response).length;
+    console.log(`Fetched league ${leagueId}, payload bytes: ${payloadSize}, success: true`);
     
     const attrs = response['@attributes'] as Record<string, string> | undefined;
     if (attrs && (attrs.id || attrs.name)) {
@@ -165,7 +173,8 @@ export async function getLeagueById(leagueId: string, cookie?: string): Promise<
     }
     
     return null;
-  } catch (e) {
+  } catch (error) {
+    console.error(`Fetch league ${leagueId} failed: ${error}`);
     return null;
   }
 }
@@ -179,8 +188,11 @@ export async function loadPlayerCache(cookie?: string): Promise<Map<string, { na
   const url = `${baseUrl}?TYPE=players&JSON=1`;
   const playerCacheMap = new Map<string, { name: string; position: string }>();
   
+  console.log(`Fetching players, cookie present: ${!!cookie}`);
+  
   try {
     const response = await fetchJSON<MFLPlayersResponse>(url, cookie);
+    const payloadSize = JSON.stringify(response).length;
     if (response.players?.player) {
       const players = Array.isArray(response.players.player)
         ? response.players.player
@@ -198,8 +210,10 @@ export async function loadPlayerCache(cookie?: string): Promise<Map<string, { na
       players: playerCacheMap,
       timestamp: Date.now()
     };
+    
+    console.log(`Fetched ${playerCacheMap.size} players, payload bytes: ${payloadSize}, success: true`);
   } catch (error) {
-    console.error('Failed to load player cache:', error);
+    console.error(`Fetch players failed: ${error}`);
   }
   
   return playerCacheMap;
@@ -235,12 +249,28 @@ export async function getTransactions(
     url += `&W=${week}`;
   }
   
-  const response = await fetchJSON<MFLTransactionsResponse>(url, cookie);
+  console.log(`Fetching transactions for league ${leagueId}`);
   
-  if (!response.transactions?.transaction) {
-    return [];
+  try {
+    const response = await fetchJSON<MFLTransactionsResponse>(url, cookie);
+    const payloadSize = JSON.stringify(response).length;
+    const hasTransactions = response.transactions?.transaction;
+    const txCount = hasTransactions 
+      ? (Array.isArray(response.transactions.transaction) 
+        ? response.transactions.transaction.length 
+        : 1) 
+      : 0;
+    
+    console.log(`Fetched ${txCount} transactions for league ${leagueId}, payload bytes: ${payloadSize}, success: true`);
+    
+    if (!response.transactions?.transaction) {
+      return [];
+    }
+    
+    const transactions = response.transactions.transaction;
+    return Array.isArray(transactions) ? transactions : [transactions];
+  } catch (error) {
+    console.error(`Fetch transactions for league ${leagueId} failed: ${error}`);
+    throw error;
   }
-  
-  const transactions = response.transactions.transaction;
-  return Array.isArray(transactions) ? transactions : [transactions];
 }
