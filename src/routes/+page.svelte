@@ -226,6 +226,21 @@
 </div>
 
 <style>
+  :root {
+    --bg-primary: #0f172a;
+    --bg-secondary: #1e293b;
+    --bg-card: #1e293b;
+    --border: #334155;
+    --accent: #22d3ee;
+    --accent-hover: #06b6d4;
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --error-bg: #450a0a;
+    --error-border: #ef4444;
+    --error-text: #ef4444;
+  }
+
   .app {
     min-height: 100vh;
     display: flex;
@@ -237,8 +252,8 @@
     justify-content: space-between;
     align-items: center;
     padding: 1rem 2rem;
-    background: #16213e;
-    border-bottom: 1px solid #0f3460;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
   }
   
 .title-row {
@@ -250,14 +265,14 @@
   .title-row h1 {
     margin: 0;
     font-size: 1.5rem;
-    color: #fff;
+    color: var(--text-primary);
     vertical-align: middle;
   }
   
   .title-row .week {
     margin-left: 0.5rem;
     font-size: 0.9rem;
-    color: #e94560;
+    color: var(--accent);
     font-weight: normal;
     vertical-align: middle;
   }
@@ -287,21 +302,21 @@
 
   .login-form input {
     padding: 0.5rem 1rem;
-    border: 1px solid #0f3460;
+    border: 1px solid var(--border);
     border-radius: 4px;
-    background: #1a1a2e;
-    color: #fff;
+    background: var(--bg-primary);
+    color: var(--text-primary);
     font-size: 0.9rem;
   }
 
   .login-form input::placeholder {
-    color: #888;
+    color: var(--text-secondary);
   }
 
   .login-form button, .login-btn {
     padding: 0.5rem 1.5rem;
-    background: #e94560;
-    color: #fff;
+    background: var(--accent);
+    color: var(--text-primary);
     border: none;
     border-radius: 4px;
     cursor: pointer;
@@ -310,11 +325,11 @@
   }
 
   .login-form button:hover, .login-btn:hover {
-    background: #d13652;
+    background: var(--accent-hover);
   }
 
   .login-form button:disabled {
-    background: #666;
+    background: var(--text-muted);
     cursor: not-allowed;
   }
 
@@ -326,8 +341,8 @@
   .sidebar {
     width: 280px;
     min-width: 280px;
-    background: #16213e;
-    border-right: 1px solid #0f3460;
+    background: var(--bg-secondary);
+    border-right: 1px solid var(--border);
     padding: 1rem;
     display: flex;
     flex-direction: column;
@@ -346,11 +361,11 @@
   .sidebar h2 {
     margin: 0 0 1rem 0;
     font-size: 1.2rem;
-    color: #fff;
+    color: var(--text-primary);
   }
 
   .login-prompt {
-    color: #888;
+    color: var(--text-secondary);
     font-size: 0.9rem;
     text-align: center;
     padding: 1rem;
@@ -373,16 +388,16 @@
   }
 
   .league-item:hover {
-    background: #0f3460;
+    background: var(--border);
   }
 
   .league-item.active {
-    background: #e94560;
+    background: var(--accent);
   }
 
   .league-name {
     flex: 1;
-    color: #fff;
+    color: var(--text-primary);
     font-size: 0.9rem;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -390,13 +405,13 @@
   }
 
   .league-id {
-    color: #888;
+    color: var(--text-secondary);
     font-size: 0.75rem;
     margin-left: 0.5rem;
   }
 
   .no-data {
-    color: #888;
+    color: var(--text-secondary);
     text-align: center;
     padding: 2rem 1rem;
   }
@@ -404,17 +419,17 @@
   .content {
     flex: 1;
     padding: 2rem;
-    background: #1a1a2e;
+    background: var(--bg-primary);
     overflow-y: auto;
   }
 
   .error {
-    background: #3d1a1a;
-    color: #e94560;
+    background: var(--error-bg);
+    color: var(--accent);
     padding: 1rem;
     border-radius: 4px;
     margin-bottom: 1rem;
-    border-left: 4px solid #e94560;
+    border-left: 4px solid var(--accent);
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -426,7 +441,7 @@
   }
 
   .loading {
-    color: #888;
+    color: var(--text-secondary);
     text-align: center;
     padding: 2rem;
   }
@@ -438,8 +453,8 @@
   }
 
   .transaction-card {
-    background: #16213e;
-    border: 1px solid #0f3460;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
     border-radius: 8px;
     padding: 1rem;
   }
@@ -450,17 +465,17 @@
     align-items: center;
     margin-bottom: 0.5rem;
     padding-bottom: 0.5rem;
-    border-bottom: 1px solid #0f3460;
+    border-bottom: 1px solid var(--border);
   }
 
   .transaction-type {
-    color: #e94560;
+    color: var(--accent);
     font-weight: 600;
     font-size: 0.95rem;
   }
 
   .transaction-week {
-    color: #888;
+    color: var(--text-secondary);
     font-size: 0.85rem;
   }
 
@@ -474,21 +489,21 @@
   }
 
   .trade-arrow {
-    color: #e94560;
+    color: var(--accent);
     font-size: 1.25rem;
   }
 
   .trade-sides {
     display: flex;
     gap: 1rem;
-    color: #fff;
+    color: var(--text-primary);
     font-size: 0.9rem;
   }
 
   .trade-side {
     flex: 1;
     padding: 0.5rem;
-    background: #1a1a2e;
+    background: var(--bg-primary);
     border-radius: 4px;
   }
 
@@ -509,12 +524,12 @@
   }
 
   .tx-bid {
-    color: #e94560;
+    color: var(--accent);
     margin-left: 0.5rem;
   }
 
   .tx-timestamp {
-    color: #666;
+    color: var(--text-muted);
     font-size: 0.85rem;
     margin-top: 0.75rem;
   }
