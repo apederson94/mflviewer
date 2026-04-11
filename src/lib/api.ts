@@ -312,16 +312,11 @@ export function formatTimestamp(timestamp: string): string {
 export async function getTransactions(
   leagueId: string,
   cookie?: string,
-  transType?: string,
   days?: number,
   week?: number
 ): Promise<MFLTransaction[]> {
   const baseUrl = await getBaseUrl();
-  let url = `${baseUrl}?TYPE=transactions&L=${leagueId}&JSON=1`;
-  
-  if (transType) {
-    url += `&TRANS_TYPE=${transType}`;
-  }
+  let url = `${baseUrl}?TYPE=transactions&L=${leagueId}&TRANS_TYPE=WAIVER,FREE_AGENT,TRADE&JSON=1`;
   
   if (days) {
     url += `&DAYS=${days}`;

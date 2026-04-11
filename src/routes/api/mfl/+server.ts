@@ -36,7 +36,6 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
   const cookie = cookies.get(MFL_COOKIE_NAME);
   const type = url.searchParams.get('type');
   const leagueId = url.searchParams.get('league');
-  const transType = url.searchParams.get('transType') || undefined;
   const days = url.searchParams.get('days') ? parseInt(url.searchParams.get('days')!) : undefined;
 
   try {
@@ -52,7 +51,7 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
         }
         const currentWeek = await getCurrentWeek();
         const currentYear = await getCurrentYear();
-        const transactions = await getTransactions(leagueId, cookie, transType, days, currentWeek);
+        const transactions = await getTransactions(leagueId, cookie, days, currentWeek);
         const players = await loadPlayerCache(cookie);
         const league = await getLeagueFull(leagueId, cookie);
         const franchiseMap = league?.franchises || new Map<string, string>();
