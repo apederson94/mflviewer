@@ -82,7 +82,8 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
         return json({ error: 'Invalid type parameter' }, { status: 400 });
     }
   } catch (error) {
-    console.error('API proxy error:', error);
-    return json({ error: 'Failed to fetch from MFL' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'An unexpected error occurred';
+    console.error('API proxy error:', message);
+    return json({ error: message }, { status: 500 });
   }
 };

@@ -397,6 +397,15 @@
     padding: 1rem;
     border-radius: 4px;
     margin-bottom: 1rem;
+    border-left: 4px solid #e94560;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .error::before {
+    content: "⚠";
+    font-weight: bold;
   }
 
   .loading {
