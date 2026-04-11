@@ -189,36 +189,25 @@
                   <span class="transaction-week">Week {transaction.week}</span>
                 </div>
                 {#if transaction.type === 'TRADE' && transaction.tradeGives && transaction.tradeReceives}
-                  <div class="trade-header">
+                  <div class="trade-content">
                     <span>{transaction.franchiseName}</span>
                     <span class="trade-arrow">→</span>
                     <span>{transaction.tradePartnerName}</span>
                   </div>
                   <div class="trade-sides">
-                    <div class="trade-side">
-                      <span>{transaction.tradeGives?.join(', ') || 'None'}</span>
-                    </div>
-                    <div class="trade-side">
-                      <span>{transaction.tradeReceives?.join(', ') || 'None'}</span>
-                    </div>
-                  </div>
-                  <div class="transaction-footer">
-                    <span class="transaction-time">{transaction.formattedTime}</span>
+                    <div class="trade-side">{transaction.tradeGives?.join(', ') || 'None'}</div>
+                    <div class="trade-side">{transaction.tradeReceives?.join(', ') || 'None'}</div>
                   </div>
                 {:else}
-                  <div class="fa-header">
-                    <span class="fa-type">{transaction.type}</span>
-                    <span class="fa-week">Week {transaction.week}</span>
+                  <div class="tx-content">
+                    <span class="tx-franchise">{transaction.franchiseName}</span>
+                    <span class="tx-player">
+                      {transaction.playerName || getPlayerName(transaction.player)}
+                      {#if transaction.bid}<span class="tx-bid">Bid: ${transaction.bid}</span>{/if}
+                    </span>
                   </div>
-                  <div class="fa-franchise">{transaction.franchiseName}</div>
-                  <div class="fa-player">
-                    {transaction.playerName || getPlayerName(transaction.player)}
-                    {#if transaction.bid}
-                      <span class="fa-bid">Bid: ${transaction.bid}</span>
-                    {/if}
-                  </div>
-                  <div class="fa-time">{transaction.formattedTime}</div>
                 {/if}
+                <div class="tx-timestamp">{transaction.formattedTime}</div>
               </div>
             {/each}
           </div>
@@ -475,88 +464,13 @@
     font-size: 0.85rem;
   }
 
-  .transaction-body {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    gap: 0.5rem;
-    color: #fff;
-    font-size: 0.9rem;
-  }
-
-  .transaction-player {
-    flex: 1;
-    min-width: 200px;
-  }
-
-  .transaction-franchise {
-    color: #e94560;
-  }
-
-  .transaction-footer {
-    margin-top: 0.5rem;
-    padding-top: 0.5rem;
-    border-top: 1px solid #0f3460;
-    color: #888;
-    font-size: 0.85rem;
-    display: flex;
-    justify-content: space-between;
-  }
-
-  .transaction-time {
-    color: #666;
-    margin-top: 0.5rem;
-  }
-
-  .fa-header {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.85rem;
-    color: #888;
-    margin-bottom: 0.25rem;
-  }
-
-  .fa-type {
-    color: #e94560;
-    font-weight: 600;
-  }
-
-  .fa-week {
-    color: #888;
-  }
-
-  .fa-franchise {
-    font-weight: 600;
-    font-size: 1rem;
-    padding: 0.25rem 0;
-  }
-
-  .fa-player {
-    font-size: 0.95rem;
-    padding: 0.25rem 0;
-  }
-
-  .fa-bid {
-    color: #e94560;
-    margin-left: 0.5rem;
-  }
-
-  .fa-time {
-    color: #666;
-    font-size: 0.85rem;
-    text-align: right;
-    margin-top: 0.5rem;
-  }
-
-  .trade-header {
+  .trade-content {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.5rem 0;
-    border-bottom: 1px solid #0f3460;
-    margin-bottom: 0.5rem;
     font-weight: 600;
     font-size: 1rem;
+    padding: 0.25rem 0;
   }
 
   .trade-arrow {
@@ -576,7 +490,33 @@
     padding: 0.5rem;
     background: #1a1a2e;
     border-radius: 4px;
-    text-align: center;
+  }
+
+  .tx-content {
+    padding: 0.25rem 0;
+    font-size: 0.95rem;
+  }
+
+  .tx-franchise {
+    font-weight: 600;
+    display: block;
+    padding: 0.25rem 0;
+  }
+
+  .tx-player {
+    display: block;
+    padding: 0.25rem 0;
+  }
+
+  .tx-bid {
+    color: #e94560;
+    margin-left: 0.5rem;
+  }
+
+  .tx-timestamp {
+    color: #666;
+    font-size: 0.85rem;
+    margin-top: 0.75rem;
   }
 
   @media (max-width: 768px) {
