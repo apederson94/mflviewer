@@ -10,6 +10,10 @@ import type {
 
 import type { MFLLoginResponse } from './types';
 
+function toArray<T>(item: T | T[]): T[] {
+  return Array.isArray(item) ? item : [item];
+}
+
 interface YearWeekCache {
   year: string;
   week: number;
@@ -132,9 +136,7 @@ export async function getMyLeagues(cookie?: string): Promise<StoredLeague[]> {
   
   try {
     const response = await fetchJSON<MFLMyLeaguesResponse>(url, cookie);
-    const leagues = response.leagues?.league ? (Array.isArray(response.leagues.league)
-      ? response.leagues.league
-      : [response.leagues.league]) : [];
+    const leagues = response.leagues?.league ? toArray(response.leagues.league) : [];
     
     console.log(`Fetched ${leagues.length} leagues, success: true`);
     
@@ -200,9 +202,7 @@ export async function getLeagueFull(leagueId: string, cookie?: string): Promise<
     const leagueName = response.league?.name || 'Unknown League';
     
     if (response.league?.franchises?.franchise) {
-      const franchises = Array.isArray(response.league.franchises.franchise)
-        ? response.league.franchises.franchise
-        : [response.league.franchises.franchise];
+      const franchises = toArray(response.league.franchises.franchise);
       
       franchises.forEach(franchise => {
         franchiseMap.set(franchise.id, franchise.name);
@@ -237,9 +237,7 @@ export async function loadPlayerCache(cookie?: string): Promise<Map<string, { na
     const response = await fetchJSON<MFLPlayersResponse>(url, cookie);
     const payloadSize = JSON.stringify(response).length;
     if (response.players?.player) {
-      const players = Array.isArray(response.players.player)
-        ? response.players.player
-        : [response.players.player];
+      const players = toArray(response.players.player);
       
       players.forEach(player => {
         playerCacheMap.set(player.id, {
@@ -302,11 +300,8 @@ export async function getTransactions(
     const response = await fetchJSON<MFLTransactionsResponse>(url, cookie);
     const payloadSize = JSON.stringify(response).length;
     const hasTransactions = response.transactions?.transaction;
-    const txCount = hasTransactions 
-      ? (Array.isArray(response.transactions.transaction) 
-        ? response.transactions.transaction.length 
-        : 1) 
-      : 0;
+    const rawTx = response.transactions?.transaction;
+    const txCount = rawTx ? toArray(rawTx).length : 0;
     
     console.log(`Fetched ${txCount} transactions for league ${leagueId}, payload bytes: ${payloadSize}, success: true`);
     
@@ -314,8 +309,7 @@ export async function getTransactions(
       return [];
     }
     
-    const transactions = response.transactions.transaction;
-    return Array.isArray(transactions) ? transactions : [transactions];
+    return toArray(response.transactions.transaction);
   } catch (error) {
     console.error(`Fetch transactions for league ${leagueId} failed: ${error}`);
     throw error;
