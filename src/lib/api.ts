@@ -181,7 +181,13 @@ export async function getLeagueById(leagueId: string, cookie?: string): Promise<
   }
 }
 
-export async function getLeagueFranchises(leagueId: string, cookie?: string): Promise<Map<string, string>> {
+export interface LeagueFull {
+  id: string;
+  name: string;
+  franchises: Map<string, string>;
+}
+
+export async function getLeagueFull(leagueId: string, cookie?: string): Promise<LeagueFull | null> {
   const baseUrl = await getBaseUrl();
   const url = `${baseUrl}?TYPE=league&L=${leagueId}&JSON=1`;
   
@@ -189,6 +195,10 @@ export async function getLeagueFranchises(leagueId: string, cookie?: string): Pr
   
   try {
     const response = await fetchJSON<MFLLeagueResponse>(url, cookie);
+    
+    const leagueIdVal = response.league?.id || leagueId;
+    const leagueName = response.league?.name || 'Unknown League';
+    
     if (response.league?.franchises?.franchise) {
       const franchises = Array.isArray(response.league.franchises.franchise)
         ? response.league.franchises.franchise
@@ -198,12 +208,18 @@ export async function getLeagueFranchises(leagueId: string, cookie?: string): Pr
         franchiseMap.set(franchise.id, franchise.name);
       });
     }
-    console.log(`Fetched ${franchiseMap.size} franchises for league ${leagueId}`);
+    
+    console.log(`Fetched full league ${leagueId}, franchises: ${franchiseMap.size}`);
+    
+    return {
+      id: leagueIdVal,
+      name: leagueName,
+      franchises: franchiseMap
+    };
   } catch (error) {
-    console.error(`Fetch franchises for league ${leagueId} failed: ${error}`);
+console.error(`Fetch full league ${leagueId} failed: ${error}`);
+    return null;
   }
-  
-  return franchiseMap;
 }
 
 export async function loadPlayerCache(cookie?: string): Promise<Map<string, { name: string; position: string }>> {

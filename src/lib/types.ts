@@ -73,6 +73,8 @@ export interface MFLFranchise {
 
 export interface MFLLeagueResponse {
   league: {
+    id: string;
+    name: string;
     franchises?: {
       franchise: MFLFranchise | MFLFranchise[];
     };

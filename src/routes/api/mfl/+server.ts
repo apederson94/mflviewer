@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getMyLeagues, getTransactions, loadPlayerCache, getCurrentWeek, getPlayerName, getLeagueFranchises, getFranchiseName } from '$lib/api';
+import { getMyLeagues, getTransactions, loadPlayerCache, getCurrentWeek, getPlayerName, getLeagueFull, getFranchiseName } from '$lib/api';
 import type { MFLTransaction } from '$lib/types';
 
 function extractPlayerIds(t: MFLTransaction): string[] {
@@ -53,11 +53,12 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
         const currentWeek = await getCurrentWeek();
         const transactions = await getTransactions(leagueId, cookie, transType, days, currentWeek);
         const players = await loadPlayerCache(cookie);
-        const franchises = await getLeagueFranchises(leagueId, cookie);
+        const league = await getLeagueFull(leagueId, cookie);
+        const franchiseMap = league?.franchises || new Map<string, string>();
         const transactionsWithNames = transactions.map(t => {
           const playerIds = extractPlayerIds(t);
           const names = playerIds.map(id => getPlayerName(players, id));
-          const franchiseName = getFranchiseName(franchises, t.franchise);
+          const franchiseName = getFranchiseName(franchiseMap, t.franchise);
           return {
             ...t,
             playerName: names.length > 0 ? names.join(', ') : undefined,
