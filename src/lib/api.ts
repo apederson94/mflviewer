@@ -288,11 +288,9 @@ export function formatDraftPick(pickId: string, currentYear?: string): string {
   
   const dpMatch = pickId.match(/^DP_(\d+)_(\d+)$/);
   if (dpMatch) {
-    const [, , round, pick] = dpMatch;
-    const roundNum = parseInt(round, 10) + 1;
-    const pickNum = parseInt(pick, 10) + 1;
-    const roundStr = roundNum === 1 ? '1st' : roundNum === 2 ? '2nd' : roundNum === 3 ? '3rd' : `${roundNum}th`;
-    return `${currentYr} Draft Pick ${roundNum}.${pickNum.toString().padStart(2, '0')}`;
+    const round = parseInt(dpMatch[1], 10) + 1;
+    const pick = parseInt(dpMatch[2], 10) + 1;
+    return currentYr + ' Draft Pick ' + round + '.' + pick.toString().padStart(2, '0');
   }
   
   return pickId;
