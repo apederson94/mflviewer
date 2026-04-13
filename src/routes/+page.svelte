@@ -263,10 +263,7 @@
     padding: 1rem 2rem;
     background: linear-gradient(180deg, var(--bg-secondary) 0%, #172033 100%);
     border-bottom: 1px solid var(--border);
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    backdrop-filter: blur(10px);
+    flex-shrink: 0;
   }
   
 .title-row {
@@ -371,6 +368,7 @@
   .main-content {
     display: flex;
     flex: 1;
+    min-height: 0;
   }
 
   .sidebar {
@@ -378,19 +376,24 @@
     min-width: 280px;
     background: linear-gradient(180deg, var(--bg-secondary) 0%, #151c2c 100%);
     border-right: 1px solid var(--border);
-    padding: 1rem;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    height: calc(100vh - 65px);
+    max-height: calc(100vh - 65px);
   }
-  
-.sidebar-content {
+
+  .sidebar-content {
     flex: 1;
-    overflow-y: auto;
+    padding: 1rem;
   }
-  
+
   .sidebar .github-stars {
+    padding: 1rem;
     text-align: right;
+    border-top: 1px solid var(--border);
   }
  
   .sidebar h2 {
@@ -399,6 +402,7 @@
     color: var(--text-primary);
     padding-bottom: 0.5rem;
     border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
   }
 
   .login-prompt {
@@ -493,6 +497,7 @@
     padding: 2rem;
     background: var(--bg-primary);
     overflow-y: auto;
+    height: calc(100vh - 65px);
   }
 
   .error {
@@ -727,12 +732,14 @@
   @media (max-width: 768px) {
     .main-content {
       flex-direction: column;
+      height: auto;
     }
 
     .sidebar {
       width: 100%;
       min-width: unset;
-      max-height: 200px;
+      max-height: 250px;
+      overflow-y: auto;
     }
 
     .header {
@@ -742,6 +749,10 @@
 
     .login-form {
       flex-wrap: wrap;
+    }
+
+    .content {
+      height: auto;
     }
 
     .trade-header, .trade-sides {
