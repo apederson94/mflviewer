@@ -183,7 +183,7 @@
         {:else if transactions.length > 0}
           <div class="transactions-list">
             {#each transactions as transaction, i (`${transaction.id ?? i}-${transaction.week ?? i}-${transaction.type ?? i}`)}
-              <div class="transaction-card">
+              <div class="transaction-card" data-type={transaction.type}>
                 <div class="transaction-header">
                   <span class="transaction-type">{transaction.type}</span>
                   <span class="transaction-week">Week {transaction.week}</span>
@@ -238,12 +238,22 @@
     --error-bg: #450a0a;
     --error-border: #ef4444;
     --error-text: #ef4444;
+
+    --trade-color: #a78bfa;
+    --waiver-color: #fb923c;
+    --free-agent-color: #34d399;
+    --system-color: #fbbf24;
+
+    --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    --card-shadow-hover: 0 8px 30px rgba(0, 0, 0, 0.4);
+    --glow-shadow: 0 0 20px rgba(34, 211, 238, 0.3);
   }
 
   .app {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    background: linear-gradient(180deg, var(--bg-primary) 0%, #0c1222 100%);
   }
 
   .header {
@@ -251,8 +261,12 @@
     justify-content: space-between;
     align-items: center;
     padding: 1rem 2rem;
-    background: var(--bg-secondary);
+    background: linear-gradient(180deg, var(--bg-secondary) 0%, #172033 100%);
     border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(10px);
   }
   
 .title-row {
@@ -272,8 +286,18 @@
     margin-left: 0.5rem;
     font-size: 0.9rem;
     color: var(--accent);
-    font-weight: normal;
+    font-weight: 600;
     vertical-align: middle;
+    background: rgba(34, 211, 238, 0.1);
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    box-shadow: var(--glow-shadow);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 15px rgba(34, 211, 238, 0.3); }
+    50% { box-shadow: 0 0 25px rgba(34, 211, 238, 0.5); }
   }
   
   .title-row .github-stars {
@@ -302,10 +326,17 @@
   .login-form input {
     padding: 0.5rem 1rem;
     border: 1px solid var(--border);
-    border-radius: 4px;
-    background: var(--bg-primary);
+    border-radius: 8px;
+    background: rgba(15, 23, 42, 0.8);
     color: var(--text-primary);
     font-size: 0.9rem;
+    transition: all 0.2s ease;
+  }
+
+  .login-form input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.1);
   }
 
   .login-form input::placeholder {
@@ -314,22 +345,27 @@
 
   .login-form button, .login-btn {
     padding: 0.5rem 1.5rem;
-    background: var(--accent);
-    color: var(--text-primary);
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
+    color: var(--bg-primary);
     border: none;
-    border-radius: 4px;
+    border-radius: 8px;
     cursor: pointer;
     font-size: 0.9rem;
     font-weight: 600;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 10px rgba(34, 211, 238, 0.3);
   }
 
   .login-form button:hover, .login-btn:hover {
-    background: var(--accent-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(34, 211, 238, 0.4);
   }
 
   .login-form button:disabled {
     background: var(--text-muted);
     cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
   }
 
   .main-content {
@@ -340,7 +376,7 @@
   .sidebar {
     width: 280px;
     min-width: 280px;
-    background: var(--bg-secondary);
+    background: linear-gradient(180deg, var(--bg-secondary) 0%, #151c2c 100%);
     border-right: 1px solid var(--border);
     padding: 1rem;
     display: flex;
@@ -361,6 +397,8 @@
     margin: 0 0 1rem 0;
     font-size: 1.2rem;
     color: var(--text-primary);
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
   }
 
   .login-prompt {
@@ -380,17 +418,44 @@
     display: flex;
     align-items: center;
     padding: 0.75rem;
-    border-radius: 4px;
+    border-radius: 8px;
     cursor: pointer;
-    margin-bottom: 0.25rem;
-    transition: background 0.2s;
+    margin-bottom: 0.5rem;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .league-item::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--accent);
+    opacity: 0;
+    transition: opacity 0.2s ease;
   }
 
   .league-item:hover {
-    background: var(--border);
+    background: rgba(51, 65, 85, 0.5);
+    transform: translateX(4px);
+  }
+
+  .league-item:hover::before {
+    opacity: 0.5;
   }
 
   .league-item.active {
+    background: linear-gradient(135deg, rgba(34, 211, 238, 0.15) 0%, rgba(34, 211, 238, 0.05) 100%);
+    border-color: var(--accent);
+    box-shadow: 0 0 20px rgba(34, 211, 238, 0.15);
+  }
+
+  .league-item.active::before {
+    opacity: 1;
     background: var(--accent);
   }
 
@@ -403,16 +468,24 @@
     white-space: nowrap;
   }
 
+  .league-item.active .league-name {
+    font-weight: 600;
+  }
+
   .league-id {
-    color: var(--text-secondary);
+    color: var(--text-muted);
     font-size: 0.75rem;
     margin-left: 0.5rem;
+    padding: 0.15rem 0.4rem;
+    background: rgba(100, 116, 139, 0.2);
+    border-radius: 4px;
   }
 
   .no-data {
     color: var(--text-secondary);
     text-align: center;
     padding: 2rem 1rem;
+    font-style: italic;
   }
 
   .content {
@@ -423,26 +496,50 @@
   }
 
   .error {
-    background: var(--error-bg);
-    color: var(--accent);
+    background: linear-gradient(135deg, var(--error-bg) 0%, #2d0a0a 100%);
+    color: var(--error-text);
     padding: 1rem;
-    border-radius: 4px;
+    border-radius: 8px;
     margin-bottom: 1rem;
-    border-left: 4px solid var(--accent);
+    border-left: 4px solid var(--error-text);
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    animation: slideIn 0.3s ease;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 
   .error::before {
     content: "⚠";
     font-weight: bold;
+    font-size: 1.2rem;
   }
 
   .loading {
     color: var(--text-secondary);
     text-align: center;
-    padding: 2rem;
+    padding: 3rem;
+  }
+
+  .loading::after {
+    content: '';
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--accent);
+    border-top-color: transparent;
+    border-radius: 50%;
+    margin-left: 0.5rem;
+    animation: spin 1s linear infinite;
+    vertical-align: middle;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
   }
 
   .transactions-list {
@@ -452,31 +549,97 @@
   }
 
   .transaction-card {
-    background: var(--bg-secondary);
+    background: linear-gradient(135deg, var(--bg-secondary) 0%, #1a2536 100%);
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 12px;
     padding: 1rem;
     overflow: hidden;
+    box-shadow: var(--card-shadow);
+    transition: all 0.2s ease;
+    animation: fadeInUp 0.3s ease;
+    position: relative;
+    overflow: visible;
+  }
+
+  .transaction-card::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: var(--accent);
+    border-radius: 12px 0 0 12px;
+  }
+
+  .transaction-card[data-type="Trade"]::before {
+    background: var(--trade-color);
+  }
+
+  .transaction-card[data-type="FA Pickup"]::before,
+  .transaction-card[data-type="Free Agent"]::before {
+    background: var(--free-agent-color);
+  }
+
+  .transaction-card[data-type="Waiver"]::before {
+    background: var(--waiver-color);
+  }
+
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .transaction-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--card-shadow-hover);
+    border-color: var(--text-muted);
   }
 
   .transaction-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.75rem;
     padding-bottom: 0.5rem;
     border-bottom: 1px solid var(--border);
   }
 
   .transaction-type {
-    color: var(--accent);
-    font-weight: 600;
+    font-weight: 700;
     font-size: 0.95rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .transaction-card[data-type="Trade"] .transaction-type {
+    color: var(--trade-color);
+    background: rgba(167, 139, 250, 0.15);
+  }
+
+  .transaction-card[data-type="FA Pickup"] .transaction-type,
+  .transaction-card[data-type="Free Agent"] .transaction-type {
+    color: var(--free-agent-color);
+    background: rgba(52, 211, 153, 0.15);
+  }
+
+  .transaction-card[data-type="Waiver"] .transaction-type {
+    color: var(--waiver-color);
+    background: rgba(251, 146, 60, 0.15);
+  }
+
+  .transaction-card:not([data-type="Trade"]):not([data-type="FA Pickup"]):not([data-type="Free Agent"]):not([data-type="Waiver"]) .transaction-type {
+    color: var(--text-secondary);
   }
 
   .transaction-week {
     color: var(--text-secondary);
     font-size: 0.85rem;
+    padding: 0.2rem 0.5rem;
+    background: rgba(100, 116, 139, 0.2);
+    border-radius: 4px;
   }
 
   .trade-header {
@@ -485,8 +648,10 @@
     gap: 1rem;
     font-weight: 600;
     font-size: 1rem;
-    padding: 0.25rem 0;
+    padding: 0.5rem 0;
     color: var(--text-primary);
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 0.5rem;
   }
 
   .trade-col {
@@ -503,10 +668,17 @@
 
   .trade-side {
     min-width: 0;
-    padding: 0.5rem;
-    background: var(--bg-primary);
-    border-radius: 4px;
+    padding: 0.75rem;
+    background: rgba(15, 23, 42, 0.6);
+    border-radius: 8px;
     word-break: break-word;
+    border: 1px solid rgba(51, 65, 85, 0.5);
+    transition: all 0.2s ease;
+  }
+
+  .trade-side:hover {
+    border-color: var(--trade-color);
+    background: rgba(167, 139, 250, 0.05);
   }
 
   .tx-content {
@@ -518,22 +690,38 @@
     font-weight: 600;
     display: block;
     padding: 0.25rem 0;
+    color: var(--text-primary);
   }
 
   .tx-player {
     display: block;
     padding: 0.25rem 0;
+    color: var(--text-secondary);
+    transition: color 0.2s ease;
+  }
+
+  .transaction-card:hover .tx-player {
+    color: var(--text-primary);
   }
 
   .tx-bid {
-    color: var(--accent);
+    color: var(--waiver-color);
     margin-left: 0.5rem;
+    font-weight: 600;
   }
 
   .tx-timestamp {
     color: var(--text-muted);
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     margin-top: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .tx-timestamp::before {
+    content: '⏱';
+    font-size: 0.9rem;
   }
 
   @media (max-width: 768px) {
@@ -554,6 +742,17 @@
 
     .login-form {
       flex-wrap: wrap;
+    }
+
+    .trade-header, .trade-sides {
+      grid-template-columns: 1fr;
+      gap: 0.5rem;
+    }
+
+    .transaction-card::before {
+      width: 100%;
+      height: 3px;
+      border-radius: 12px 12px 0 0;
     }
   }
 </style>
