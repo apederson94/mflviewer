@@ -188,21 +188,20 @@
                   <span class="transaction-type">{transaction.type}</span>
                   <span class="transaction-week">Week {transaction.week}</span>
                 </div>
-                {#if transaction.type === 'TRADE' && transaction.tradeGives && transaction.tradeReceives}
-                  <div class="trade-content">
-                    <span>{transaction.franchiseName}</span>
-                    <span class="trade-arrow">→</span>
-                    <span>{transaction.tradePartnerName}</span>
+                {#if transaction.type === 'Trade' && transaction.tradeGives && transaction.tradeReceives}
+                  <div class="trade-header">
+                    <span class="trade-franchise">{transaction.franchiseName}</span>
+                    <span class="trade-partner">{transaction.tradePartnerName}</span>
                   </div>
                   <div class="trade-sides">
-                    <div class="trade-side">{transaction.tradeGives?.join(', ') || 'None'}</div>
                     <div class="trade-side">{transaction.tradeReceives?.join(', ') || 'None'}</div>
+                    <div class="trade-side">{transaction.tradeGives?.join(', ') || 'None'}</div>
                   </div>
                 {:else}
                   <div class="tx-content">
                     <span class="tx-franchise">{transaction.franchiseName}</span>
                     <span class="tx-player">
-                      {transaction.playerName || getPlayerName(transaction.player)}
+                      {transaction.playerName || getPlayerName(transaction.player || '')}
                       {#if transaction.bid}<span class="tx-bid">Bid: ${transaction.bid}</span>{/if}
                     </span>
                   </div>
@@ -457,6 +456,7 @@
     border: 1px solid var(--border);
     border-radius: 8px;
     padding: 1rem;
+    overflow: hidden;
   }
 
   .transaction-header {
@@ -479,32 +479,33 @@
     font-size: 0.85rem;
   }
 
-  .trade-content {
+  .trade-header {
     display: flex;
-    align-items: center;
-    gap: 0.5rem;
+    justify-content: space-between;
     font-weight: 600;
     font-size: 1rem;
     padding: 0.25rem 0;
+    color: var(--text-primary);
   }
 
-  .trade-arrow {
-    color: var(--accent);
-    font-size: 1.25rem;
+  .trade-partner {
+    color: var(--text-secondary);
   }
 
   .trade-sides {
-    display: flex;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 1rem;
     color: var(--text-primary);
     font-size: 0.9rem;
   }
 
   .trade-side {
-    flex: 1;
+    min-width: 0;
     padding: 0.5rem;
     background: var(--bg-primary);
     border-radius: 4px;
+    word-break: break-word;
   }
 
   .tx-content {
