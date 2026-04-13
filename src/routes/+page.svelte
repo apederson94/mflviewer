@@ -190,8 +190,8 @@
                 </div>
                 {#if transaction.type === 'Trade' && transaction.tradeGives && transaction.tradeReceives}
                   <div class="trade-header">
-                    <span class="trade-franchise">{transaction.franchiseName}</span>
-                    <span class="trade-partner">{transaction.tradePartnerName}</span>
+                    <span class="trade-col">{transaction.franchiseName}</span>
+                    <span class="trade-col">{transaction.tradePartnerName}</span>
                   </div>
                   <div class="trade-sides">
                     <div class="trade-side">{transaction.tradeReceives?.join(', ') || 'None'}</div>
@@ -480,16 +480,17 @@
   }
 
   .trade-header {
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
     font-weight: 600;
     font-size: 1rem;
     padding: 0.25rem 0;
     color: var(--text-primary);
   }
 
-  .trade-partner {
-    color: var(--text-secondary);
+  .trade-col {
+    text-align: left;
   }
 
   .trade-sides {
