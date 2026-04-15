@@ -113,39 +113,42 @@
     <div class="title-row">
       <h1>MFL Transaction Viewer <span class="week">Week {data.week}</span></h1>
     </div>
-    <div class="header-controls">
+    <div class="header-mobile-controls">
       <div class="mobile-league-selector-wrapper">
-        <select 
-          class="mobile-league-selector"
-          value={selectedLeague?.id || ''}
-          onchange={handleMobileLeagueChange}
-        >
-          <option value="" disabled>Select a league</option>
-          {#each leagues as league}
-            <option value={league.id}>{league.name}</option>
-          {/each}
-        </select>
+        {#if isLoggedIn}
+          <select 
+            class="mobile-league-selector"
+            value={selectedLeague?.id || ''}
+            onchange={handleMobileLeagueChange}
+          >
+            <option value="" disabled>Select a league</option>
+            {#each leagues as league}
+              <option value={league.id}>{league.name}</option>
+            {/each}
+          </select>
+        {/if}
       </div>
       <div class="auth-row">
-        {#if isLoggedIn}
-          <button onclick={handleLogout} class="login-btn">Logout</button>
-      {:else}
-        <form class="login-form" onsubmit={handleLogin}>
-          <input
-            type="text"
-            placeholder="Username"
-            bind:value={loginUsername}
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            bind:value={loginPassword}
-          />
-          <button type="submit" disabled={formLoading}>
-            Login
-          </button>
-        </form>
-      {/if}
+          {#if isLoggedIn}
+            <button onclick={handleLogout} class="login-btn">Logout</button>
+          {:else}
+            <form class="login-form" onsubmit={handleLogin}>
+              <input
+                type="text"
+                placeholder="Username"
+                bind:value={loginUsername}
+              />
+              <input
+                type="password"
+                placeholder="Password"
+                bind:value={loginPassword}
+              />
+              <button type="submit" disabled={formLoading}>
+                Login
+              </button>
+            </form>
+          {/if}
+      </div>
     </div>
   </header>
   
@@ -210,18 +213,18 @@
                 </div>
                 {#if transaction.type === 'Trade' && transaction.tradeGives && transaction.tradeReceives}
                   <div class="trade-header">
-                    <div class="franchise-item">
-                      <span class="franchise-label">Franchise</span>
-                      <span class="franchise-name">{transaction.franchiseName}</span>
-                    </div>
-                    <div class="franchise-item">
-                      <span class="franchise-label">Trade Partner</span>
-                      <span class="franchise-name">{transaction.tradePartnerName}</span>
-                    </div>
+                    <span class="trade-col">{transaction.franchiseName}</span>
+                    <span class="trade-col">{transaction.tradePartnerName}</span>
                   </div>
                   <div class="trade-sides">
-                    <div class="trade-side">{transaction.tradeReceives?.join(', ') || 'None'}</div>
-                    <div class="trade-side">{transaction.tradeGives?.join(', ') || 'None'}</div>
+                    <div class="trade-side">
+                      <div class="trade-separator"></div>
+                      <div class="trade-side-content">{transaction.tradeReceives?.join(', ') || 'None'}</div>
+                    </div>
+                    <div class="trade-side">
+                      <div class="trade-separator"></div>
+                      <div class="trade-side-content">{transaction.tradeGives?.join(', ') || 'None'}</div>
+                    </div>
                   </div>
                 {:else}
                   <div class="fa-header">
@@ -554,7 +557,7 @@
     display: none;
   }
 
-  .header-controls {
+  .header-mobile-controls {
     display: none;
   }
 
@@ -608,14 +611,14 @@
   .transactions-list {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 0.5rem;
   }
 
   .transaction-card {
     background: linear-gradient(135deg, var(--bg-secondary) 0%, #1a2536 100%);
     border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 1rem;
+    border-radius: 8px;
+    padding: 0.5rem;
     overflow: hidden;
     box-shadow: var(--card-shadow);
     transition: all 0.2s ease;
@@ -630,9 +633,9 @@
     left: 0;
     top: 0;
     bottom: 0;
-    width: 4px;
+    width: 3px;
     background: var(--accent);
-    border-radius: 12px 0 0 12px;
+    border-radius: 8px 0 0 8px;
   }
 
   .transaction-card[data-type="Trade"]::before {
@@ -664,16 +667,16 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 0.75rem;
-    padding-bottom: 0.5rem;
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.25rem;
     border-bottom: 1px solid var(--border);
   }
 
   .transaction-type {
     font-weight: 700;
-    font-size: 0.95rem;
-    padding: 0.2rem 0.6rem;
-    border-radius: 4px;
+    font-size: 0.75rem;
+    padding: 0.15rem 0.4rem;
+    border-radius: 3px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
@@ -719,8 +722,13 @@
     font-size: 1rem;
     padding: 0.5rem 0;
     color: var(--text-primary);
-    border-bottom: 1px solid var(--border);
-    margin-bottom: 0.5rem;
+  }
+
+  .trade-col {
+    text-align: left;
+    color: var(--text-primary);
+    font-weight: 700;
+    font-size: 1rem;
   }
 
   .franchise-item {
@@ -747,16 +755,16 @@
   .trade-sides {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 1rem;
+    gap: 0.5rem;
     color: var(--text-primary);
     font-size: 0.9rem;
   }
 
   .trade-side {
     min-width: 0;
-    padding: 0.75rem;
+    padding: 0.5rem;
     background: rgba(15, 23, 42, 0.6);
-    border-radius: 8px;
+    border-radius: 6px;
     word-break: break-word;
     border: 1px solid rgba(51, 65, 85, 0.5);
     transition: all 0.2s ease;
@@ -782,16 +790,16 @@
   .fa-sides {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 1rem;
+    gap: 0.5rem;
     color: var(--text-primary);
     font-size: 0.9rem;
   }
 
   .fa-side {
     min-width: 0;
-    padding: 0.75rem;
+    padding: 0.5rem;
     background: rgba(15, 23, 42, 0.6);
-    border-radius: 8px;
+    border-radius: 6px;
     word-break: break-word;
     border: 1px solid rgba(51, 65, 85, 0.5);
     transition: all 0.2s ease;
@@ -931,24 +939,26 @@
       font-size: 1rem;
     }
 
-    .mobile-league-selector-wrapper {
-      display: block;
-      width: 100%;
-      text-align: center;
-    }
-
-    .header-controls {
+    .header-mobile-controls {
       display: flex;
       flex-direction: row;
       align-items: center;
       justify-content: center;
       gap: 1rem;
       width: 100%;
+      visibility: visible;
+      opacity: 1;
     }
 
     .mobile-league-selector-wrapper {
       flex: 1;
       max-width: 70%;
+      text-align: center;
+      display: block;
+    }
+
+    .mobile-league-selector-wrapper select {
+      width: 100%;
     }
 
     .auth-row {
@@ -956,6 +966,7 @@
     }
 
     .header {
+      display: flex;
       flex-direction: column;
       gap: 1rem;
       position: sticky;
