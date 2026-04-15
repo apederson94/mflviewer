@@ -198,24 +198,32 @@
                     <div class="trade-side">{transaction.tradeGives?.join(', ') || 'None'}</div>
                   </div>
                 {:else}
-                  <div class="tx-content">
-                    <span class="tx-franchise">{transaction.franchiseName}</span>
-                    <span class="tx-player">
-                      {#if transaction.addedPlayers?.length}
-                        <span class="player-list">
-                          <span class="badge badge-added">Added</span>
-                          <span class="player-names">{transaction.addedPlayers.map(p => p.name).join(', ')}</span>
-                        </span>
-                      {/if}
-                      {#if transaction.droppedPlayers?.length}
-                        <span class="player-list">
-                          <span class="badge badge-dropped">Dropped</span>
-                          <span class="player-names">{transaction.droppedPlayers.map(p => p.name).join(', ')}</span>
-                        </span>
-                      {/if}
-                      {#if transaction.bid}<span class="tx-bid">Bid: ${transaction.bid}</span>{/if}
-                    </span>
+                  <div class="fa-header">
+                    <span class="fa-col">{transaction.franchiseName}</span>
                   </div>
+                  <div class="fa-sides">
+                    <div class="fa-side">
+                      <span class="fa-side-header">Added</span>
+                      <span class="fa-side-content">
+                        {#if transaction.addedPlayers?.length}
+                          {transaction.addedPlayers.map(p => p.name).join(', ')}
+                        {:else}
+                          None
+                        {/if}
+                      </span>
+                    </div>
+                    <div class="fa-side">
+                      <span class="fa-side-header">Dropped</span>
+                      <span class="fa-side-content">
+                        {#if transaction.droppedPlayers?.length}
+                          {transaction.droppedPlayers.map(p => p.name).join(', ')}
+                        {:else}
+                          None
+                        {/if}
+                      </span>
+                    </div>
+                  </div>
+                  {#if transaction.bid}<span class="tx-bid">Bid: ${transaction.bid}</span>{/if}
                 {/if}
                 <div class="tx-timestamp">{transaction.formattedTime}</div>
               </div>
@@ -593,7 +601,8 @@
   }
 
   .transaction-card[data-type="FA Pickup"]::before,
-  .transaction-card[data-type="Free Agent"]::before {
+  .transaction-card[data-type="Free Agent"]::before,
+  .transaction-card[data-type="Add/Drop"]::before {
     background: var(--free-agent-color);
   }
 
@@ -631,14 +640,19 @@
   }
 
   .transaction-card[data-type="Trade"] .transaction-type {
-    color: var(--trade-color);
+    color: #c4b5fd;
     background: rgba(167, 139, 250, 0.15);
+    box-shadow: 0 0 12px rgba(167, 139, 250, 0.3);
+    border: 1px solid rgba(167, 139, 250, 0.3);
   }
 
   .transaction-card[data-type="FA Pickup"] .transaction-type,
-  .transaction-card[data-type="Free Agent"] .transaction-type {
-    color: var(--free-agent-color);
+  .transaction-card[data-type="Free Agent"] .transaction-type,
+  .transaction-card[data-type="Add/Drop"] .transaction-type {
+    color: #6ee7b7;
     background: rgba(52, 211, 153, 0.15);
+    box-shadow: 0 0 12px rgba(52, 211, 153, 0.3);
+    border: 1px solid rgba(52, 211, 153, 0.3);
   }
 
   .transaction-card[data-type="Waiver"] .transaction-type {
@@ -646,7 +660,7 @@
     background: rgba(251, 146, 60, 0.15);
   }
 
-  .transaction-card:not([data-type="Trade"]):not([data-type="FA Pickup"]):not([data-type="Free Agent"]):not([data-type="Waiver"]) .transaction-type {
+  .transaction-card:not([data-type="Trade"]):not([data-type="FA Pickup"]):not([data-type="Free Agent"]):not([data-type="Add/Drop"]):not([data-type="Waiver"]) .transaction-type {
     color: var(--text-secondary);
   }
 
@@ -695,6 +709,60 @@
   .trade-side:hover {
     border-color: var(--trade-color);
     background: rgba(167, 139, 250, 0.05);
+  }
+
+  .fa-header {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    font-weight: 600;
+    font-size: 1rem;
+    padding: 0.5rem 0;
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 0.5rem;
+  }
+
+  .fa-col {
+    text-align: left;
+  }
+
+  .fa-sides {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+  }
+
+  .fa-side {
+    min-width: 0;
+    padding: 0.75rem;
+    background: rgba(15, 23, 42, 0.6);
+    border-radius: 8px;
+    word-break: break-word;
+    border: 1px solid rgba(51, 65, 85, 0.5);
+  }
+
+  .fa-side-header {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.25rem;
+  }
+
+  .fa-side:first-child .fa-side-header {
+    color: var(--free-agent-color);
+  }
+
+  .fa-side:last-child .fa-side-header {
+    color: #f87171;
+  }
+
+  .fa-side-content {
+    color: var(--text-secondary);
   }
 
   .tx-content {
