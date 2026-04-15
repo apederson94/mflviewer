@@ -742,6 +742,17 @@
     border-radius: 8px;
     word-break: break-word;
     border: 1px solid rgba(51, 65, 85, 0.5);
+    transition: all 0.2s ease;
+  }
+
+  .fa-side:first-child:hover {
+    border-color: var(--free-agent-color);
+    background: rgba(52, 211, 153, 0.05);
+  }
+
+  .fa-side:last-child:hover {
+    border-color: #f87171;
+    background: rgba(248, 113, 113, 0.05);
   }
 
   .fa-side-header {
