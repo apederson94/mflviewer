@@ -686,6 +686,8 @@
 
   .trade-col {
     text-align: left;
+    color: var(--accent);
+    font-weight: 600;
   }
 
   .trade-sides {
@@ -725,6 +727,8 @@
 
   .fa-col {
     text-align: left;
+    color: var(--accent);
+    font-weight: 600;
   }
 
   .fa-sides {
