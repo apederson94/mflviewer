@@ -686,7 +686,7 @@
 
   .trade-col {
     text-align: left;
-    color: var(--accent);
+    color: var(--text-secondary);
     font-weight: 600;
   }
 
@@ -727,7 +727,7 @@
 
   .fa-col {
     text-align: left;
-    color: var(--accent);
+    color: var(--text-secondary);
     font-weight: 600;
   }
 
