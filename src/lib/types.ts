@@ -13,6 +13,12 @@ export interface MFLPlayer {
   locked?: string;
 }
 
+export interface TransactionPlayer {
+  id: string;
+  name: string;
+  position?: string;
+}
+
 export interface MFLTransaction {
   id?: string;
   type: string;
@@ -36,6 +42,8 @@ export interface MFLTransaction {
   timestamp?: string;
   expires?: string;
   formattedTime?: string;
+  addedPlayers?: TransactionPlayer[];
+  droppedPlayers?: TransactionPlayer[];
 }
 
 export interface MFLTransactionsResponse {
