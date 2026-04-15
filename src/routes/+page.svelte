@@ -773,7 +773,6 @@
   }
 
   .fa-side-content {
-    color: var(--text-secondary);
   }
 
   .tx-content {
