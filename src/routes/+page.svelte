@@ -190,8 +190,14 @@
                 </div>
                 {#if transaction.type === 'Trade' && transaction.tradeGives && transaction.tradeReceives}
                   <div class="trade-header">
-                    <span class="trade-col">{transaction.franchiseName}</span>
-                    <span class="trade-col">{transaction.tradePartnerName}</span>
+                    <div class="franchise-item">
+                      <span class="franchise-label">Franchise</span>
+                      <span class="franchise-name">{transaction.franchiseName}</span>
+                    </div>
+                    <div class="franchise-item">
+                      <span class="franchise-label">Trade Partner</span>
+                      <span class="franchise-name">{transaction.tradePartnerName}</span>
+                    </div>
                   </div>
                   <div class="trade-sides">
                     <div class="trade-side">{transaction.tradeReceives?.join(', ') || 'None'}</div>
@@ -199,7 +205,10 @@
                   </div>
                 {:else}
                   <div class="fa-header">
-                    <span class="fa-col">{transaction.franchiseName}</span>
+                    <div class="franchise-item">
+                      <span class="franchise-label">Franchise</span>
+                      <span class="franchise-name">{transaction.franchiseName}</span>
+                    </div>
                   </div>
                   <div class="fa-sides">
                     <div class="fa-side">
@@ -261,6 +270,7 @@
     --trade-color: #a78bfa;
     --waiver-color: #fb923c;
     --free-agent-color: #34d399;
+    --franchise-color: #38bdf8;
     --system-color: #fbbf24;
 
     --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
@@ -684,10 +694,25 @@
     margin-bottom: 0.5rem;
   }
 
-  .trade-col {
+  .franchise-item {
     text-align: left;
-    color: var(--text-secondary);
-    font-weight: 600;
+  }
+
+  .franchise-label {
+    display: block;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    margin-bottom: 0.25rem;
+  }
+
+  .franchise-name {
+    display: block;
+    color: var(--text-primary);
+    font-weight: 700;
+    font-size: 1rem;
   }
 
   .trade-sides {
@@ -723,12 +748,6 @@
     color: var(--text-primary);
     border-bottom: 1px solid var(--border);
     margin-bottom: 0.5rem;
-  }
-
-  .fa-col {
-    text-align: left;
-    color: var(--text-secondary);
-    font-weight: 600;
   }
 
   .fa-sides {
