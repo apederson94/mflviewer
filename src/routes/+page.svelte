@@ -128,7 +128,7 @@
           </select>
         {/if}
       </div>
-      <div class="auth-row">
+      <div class="auth-row-mobile">
           {#if isLoggedIn}
             <button onclick={handleLogout} class="login-btn">Logout</button>
           {:else}
@@ -149,6 +149,27 @@
             </form>
           {/if}
       </div>
+    </div>
+    <div class="auth-row">
+        {#if isLoggedIn}
+          <button onclick={handleLogout} class="login-btn">Logout</button>
+        {:else}
+          <form class="login-form" onsubmit={handleLogin}>
+            <input
+              type="text"
+              placeholder="Username"
+              bind:value={loginUsername}
+            />
+            <input
+              type="password"
+              placeholder="Password"
+              bind:value={loginPassword}
+            />
+            <button type="submit" disabled={formLoading}>
+              Login
+            </button>
+          </form>
+        {/if}
     </div>
   </header>
   
@@ -561,6 +582,10 @@
     display: none;
   }
 
+  .auth-row-mobile {
+    display: none;
+  }
+
   .error {
     background: linear-gradient(135deg, var(--error-bg) 0%, #2d0a0a 100%);
     color: var(--error-text);
@@ -961,8 +986,13 @@
       width: 100%;
     }
 
-    .auth-row {
+    .auth-row-mobile {
+      display: block;
       flex-shrink: 0;
+    }
+
+    .auth-row {
+      display: none;
     }
 
     .header {
