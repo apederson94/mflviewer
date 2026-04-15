@@ -12,33 +12,11 @@ function getTransactionDisplayName(type: string): string {
   }
 }
 
-function extractPlayerIds(t: MFLTransaction): string[] {
-  const players: string[] = [];
-  
-  if (t.type === 'FREE_AGENT' && t.transaction) {
-    const ids = t.transaction.split(',');
-    for (const id of ids) {
-      const cleaned = id.replace('|', '').trim();
-      if (cleaned.length > 0) {
-        players.push(cleaned);
-      }
-    }
-  }
-  
-  if (t.type === 'TRADE') {
-    if (t.franchise1_gave_up) {
-      for (const id of t.franchise1_gave_up.split(',')) {
-        if (id.trim()) players.push(id.trim());
-      }
-    }
-    if (t.franchise2_gave_up) {
-      for (const id of t.franchise2_gave_up.split(',')) {
-        if (id.trim()) players.push(id.trim());
-      }
-    }
-  }
-  
-  return players;
+function parseFreeAgentTransaction(transaction: string): { added: string[]; dropped: string[] } {
+  const parts = transaction.split('|');
+  const added = parts[0]?.split(',').map(id => id.trim()).filter(Boolean) || [];
+  const dropped = parts[1]?.split(',').map(id => id.trim()).filter(Boolean) || [];
+  return { added, dropped };
 }
 
 export const GET: RequestHandler = async ({ cookies, url }) => {
@@ -98,14 +76,27 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
           }
           
           // FREE_AGENT or other
-          const playerIds = extractPlayerIds(t);
-          const names = playerIds.map(id => getPlayerName(players, id));
+          const { added, dropped } = t.transaction 
+            ? parseFreeAgentTransaction(t.transaction)
+            : { added: [] as string[], dropped: [] as string[] };
+          
+          const addedPlayers = added.map(id => ({
+            id,
+            name: getPlayerName(players, id)
+          }));
+          const droppedPlayers = dropped.map(id => ({
+            id,
+            name: getPlayerName(players, id)
+          }));
+          
           const formattedTime = t.timestamp ? formatTimestamp(t.timestamp) : '';
           return {
             ...t,
             type: getTransactionDisplayName(t.type),
-            playerNames: names,
-            playerName: names.length > 0 ? names.join(', ') : undefined,
+            addedPlayers,
+            droppedPlayers,
+            playerNames: [...addedPlayers.map(p => p.name), ...droppedPlayers.map(p => p.name)],
+            playerName: [...addedPlayers.map(p => p.name), ...droppedPlayers.map(p => p.name)].join(', ') || undefined,
             franchiseName,
             formattedTime
           };
