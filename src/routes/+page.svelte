@@ -95,6 +95,12 @@
     loadTransactions(league.id);
   }
 
+  function handleMobileLeagueChange(e: Event) {
+    const target = e.target as HTMLSelectElement;
+    const league = leagues.find(l => l.id === target.value);
+    if (league) handleSelectLeague(league);
+  }
+
   
 </script>
 
@@ -107,9 +113,22 @@
     <div class="title-row">
       <h1>MFL Transaction Viewer <span class="week">Week {data.week}</span></h1>
     </div>
-    <div class="auth-row">
-      {#if isLoggedIn}
-        <button onclick={handleLogout} class="login-btn">Logout</button>
+    <div class="header-controls">
+      <div class="mobile-league-selector-wrapper">
+        <select 
+          class="mobile-league-selector"
+          value={selectedLeague?.id || ''}
+          onchange={handleMobileLeagueChange}
+        >
+          <option value="" disabled>Select a league</option>
+          {#each leagues as league}
+            <option value={league.id}>{league.name}</option>
+          {/each}
+        </select>
+      </div>
+      <div class="auth-row">
+        {#if isLoggedIn}
+          <button onclick={handleLogout} class="login-btn">Logout</button>
       {:else}
         <form class="login-form" onsubmit={handleLogin}>
           <input
@@ -181,7 +200,8 @@
         {#if loading}
           <div class="loading">Loading transactions...</div>
         {:else if transactions.length > 0}
-          <div class="transactions-list">
+          <div class="transactions-wrapper">
+            <div class="transactions-list">
             {#each transactions as transaction, i (`${transaction.id ?? i}-${transaction.week ?? i}-${transaction.type ?? i}`)}
               <div class="transaction-card" data-type={transaction.type}>
                 <div class="transaction-header">
@@ -237,6 +257,7 @@
                 <div class="tx-timestamp">{transaction.formattedTime}</div>
               </div>
             {/each}
+            </div>
           </div>
         {:else}
           <div class="no-data">
@@ -527,6 +548,14 @@
     background: var(--bg-primary);
     overflow-y: auto;
     height: calc(100vh - 65px);
+  }
+
+  .mobile-league-selector-wrapper {
+    display: none;
+  }
+
+  .header-controls {
+    display: none;
   }
 
   .error {
@@ -884,19 +913,54 @@
   @media (max-width: 768px) {
     .main-content {
       flex-direction: column;
-      height: auto;
+      height: calc(100vh - 65px);
     }
 
     .sidebar {
+      display: none;
+    }
+
+    .mobile-league-selector {
+      display: block;
       width: 100%;
-      min-width: unset;
-      max-height: 250px;
-      overflow-y: auto;
+      padding: 0.75rem;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+
+    .mobile-league-selector-wrapper {
+      display: block;
+      width: 100%;
+      text-align: center;
+    }
+
+    .header-controls {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      width: 100%;
+    }
+
+    .mobile-league-selector-wrapper {
+      flex: 1;
+      max-width: 70%;
+    }
+
+    .auth-row {
+      flex-shrink: 0;
     }
 
     .header {
       flex-direction: column;
       gap: 1rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
     }
 
     .login-form {
@@ -904,7 +968,10 @@
     }
 
     .content {
-      height: auto;
+      height: 100%;
+      min-height: 0;
+      overflow-y: auto;
+      flex: 1;
     }
 
     .trade-header, .trade-sides {
