@@ -201,7 +201,18 @@
                   <div class="tx-content">
                     <span class="tx-franchise">{transaction.franchiseName}</span>
                     <span class="tx-player">
-                      {transaction.playerName || getPlayerName(transaction.player || '')}
+                      {#if transaction.addedPlayers?.length}
+                        <span class="player-list">
+                          <span class="badge badge-added">Added</span>
+                          <span class="player-names">{transaction.addedPlayers.map(p => p.name).join(', ')}</span>
+                        </span>
+                      {/if}
+                      {#if transaction.droppedPlayers?.length}
+                        <span class="player-list">
+                          <span class="badge badge-dropped">Dropped</span>
+                          <span class="player-names">{transaction.droppedPlayers.map(p => p.name).join(', ')}</span>
+                        </span>
+                      {/if}
                       {#if transaction.bid}<span class="tx-bid">Bid: ${transaction.bid}</span>{/if}
                     </span>
                   </div>
@@ -713,6 +724,46 @@
     color: var(--waiver-color);
     margin-left: 0.5rem;
     font-weight: 600;
+  }
+
+  .added-players {
+    color: var(--free-agent-color);
+    display: block;
+  }
+
+  .dropped-players {
+    color: #f87171;
+    display: block;
+  }
+
+  .player-list {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .badge-added {
+    background: rgba(52, 211, 153, 0.2);
+    color: var(--free-agent-color);
+  }
+
+  .badge-dropped {
+    background: rgba(248, 113, 113, 0.2);
+    color: #f87171;
+  }
+
+  .player-names {
+    color: var(--text-primary);
   }
 
   .tx-timestamp {
