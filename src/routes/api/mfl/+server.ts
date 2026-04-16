@@ -50,12 +50,18 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
             const f2Gave = t.franchise2_gave_up?.split(',').filter(Boolean) || [];
             
             const f1Names = f1Gave.map(id => {
-              if (id.startsWith('FP_') || id.startsWith('DP_')) return formatDraftPick(id.trim(), currentYear);
-              return getPlayerName(players, id.trim());
+              const cleanId = id.trim();
+              if (cleanId.startsWith('FP_') || cleanId.startsWith('DP_')) {
+                return { id: cleanId, name: formatDraftPick(cleanId, currentYear), position: 'PICK' };
+              }
+              return { id: cleanId, name: getPlayerName(players, cleanId), position: getPlayerPosition(players, cleanId)?.toUpperCase() };
             });
             const f2Names = f2Gave.map(id => {
-              if (id.startsWith('FP_') || id.startsWith('DP_')) return formatDraftPick(id.trim(), currentYear);
-              return getPlayerName(players, id.trim());
+              const cleanId = id.trim();
+              if (cleanId.startsWith('FP_') || cleanId.startsWith('DP_')) {
+                return { id: cleanId, name: formatDraftPick(cleanId, currentYear), position: 'PICK' };
+              }
+              return { id: cleanId, name: getPlayerName(players, cleanId), position: getPlayerPosition(players, cleanId)?.toUpperCase() };
             });
 
             const tradePartnerId = t.franchise === t.franchise ? t.franchise2 : t.franchise;
@@ -65,8 +71,8 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
             return {
               ...t,
               type: getTransactionDisplayName(t.type),
-              playerNames: [...f1Names, ...f2Names],
-              playerName: [...f1Names, ...f2Names].join(', '),
+              playerNames: [...f1Names.map(p => p.name), ...f2Names.map(p => p.name)],
+              playerName: [...f1Names.map(p => p.name), ...f2Names.map(p => p.name)].join(', '),
               franchiseName,
               tradePartnerName: t.franchise2 ? getFranchiseName(franchiseMap, t.franchise2) : undefined,
               tradeGives: f1Names,

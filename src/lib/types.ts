@@ -33,8 +33,8 @@ export interface MFLTransaction {
   playerNames?: string[];
   franchiseName?: string;
   tradePartnerName?: string;
-  tradeGives?: string[];
-  tradeReceives?: string[];
+  tradeGives?: TransactionPlayer[];
+  tradeReceives?: TransactionPlayer[];
   transaction?: string;
   franchise1_gave_up?: string;
   franchise2_gave_up?: string;

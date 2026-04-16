@@ -240,11 +240,41 @@
                   <div class="trade-sides">
                     <div class="trade-side">
                       <div class="trade-separator"></div>
-                      <div class="trade-side-content">{transaction.tradeReceives?.join(', ') || 'None'}</div>
+                      <div class="trade-side-content">
+                        {#if transaction.tradeReceives?.length}
+                          <div class="player-list">
+                            {#each transaction.tradeReceives as player}
+                              <div class="player-item">
+                                {#if player.position}
+                                  <span class="position-badge" data-position={player.position}>{player.position}</span>
+                                {/if}
+                                <span class="player-name">{player.name}</span>
+                              </div>
+                            {/each}
+                          </div>
+                        {:else}
+                          None
+                        {/if}
+                      </div>
                     </div>
                     <div class="trade-side">
                       <div class="trade-separator"></div>
-                      <div class="trade-side-content">{transaction.tradeGives?.join(', ') || 'None'}</div>
+                      <div class="trade-side-content">
+                        {#if transaction.tradeGives?.length}
+                          <div class="player-list">
+                            {#each transaction.tradeGives as player}
+                              <div class="player-item">
+                                {#if player.position}
+                                  <span class="position-badge" data-position={player.position}>{player.position}</span>
+                                {/if}
+                                <span class="player-name">{player.name}</span>
+                              </div>
+                            {/each}
+                          </div>
+                        {:else}
+                          None
+                        {/if}
+                      </div>
                     </div>
                   </div>
                 {:else}
@@ -796,14 +826,14 @@
   }
 
   .trade-sides {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    display: flex;
     gap: 0.5rem;
     color: var(--text-primary);
     font-size: 0.9rem;
   }
 
   .trade-side {
+    flex: 1;
     min-width: 0;
     padding: 0.5rem;
     background: rgba(15, 23, 42, 0.6);
@@ -811,11 +841,16 @@
     word-break: break-word;
     border: 1px solid rgba(51, 65, 85, 0.5);
     transition: all 0.2s ease;
+    text-align: left;
   }
 
   .trade-side:hover {
     border-color: var(--trade-color);
     background: rgba(167, 139, 250, 0.05);
+  }
+
+  .trade-side-content {
+    text-align: left;
   }
 
   .fa-header {
@@ -831,14 +866,14 @@
   }
 
   .fa-sides {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    display: flex;
     gap: 0.5rem;
     color: var(--text-primary);
     font-size: 0.9rem;
   }
 
   .fa-side {
+    flex: 1;
     min-width: 0;
     padding: 0.5rem;
     background: rgba(15, 23, 42, 0.6);
@@ -846,6 +881,7 @@
     word-break: break-word;
     border: 1px solid rgba(51, 65, 85, 0.5);
     transition: all 0.2s ease;
+    text-align: left;
   }
 
   .fa-side:first-child:hover {
@@ -880,18 +916,22 @@
 
   .player-list {
     display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
+    flex-direction: column;
+    gap: 0.25rem;
+    align-items: flex-start;
+    width: 100%;
   }
 
   .player-item {
-    display: inline-flex;
+    display: flex;
     align-items: center;
     gap: 0.35rem;
+    width: 100%;
   }
 
   .player-name {
     color: var(--text-primary);
+    text-align: left;
   }
 
   .position-badge {
@@ -900,6 +940,7 @@
     padding: 0.1rem 0.35rem;
     border-radius: 3px;
     text-transform: uppercase;
+    flex-shrink: 0;
   }
 
   .position-badge[data-position="QB"] {
@@ -962,6 +1003,12 @@
   .position-badge[data-position="UNK"] {
     background: rgba(100, 116, 139, 0.2);
     color: #94a3b8;
+  }
+
+  .position-badge[data-position="PICK"] {
+    background: rgba(156, 163, 175, 0.25);
+    color: #d1d5db;
+    border: 1px solid rgba(156, 163, 175, 0.4);
   }
 
   .tx-content {
