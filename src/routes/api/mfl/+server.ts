@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getMyLeagues, getTransactions, loadPlayerCache, getCurrentWeek, getCurrentYear, getPlayerName, getLeagueFull, getFranchiseName, formatDraftPick, formatTimestamp, MFL_COOKIE_NAME } from '$lib/api';
+import { getMyLeagues, getTransactions, loadPlayerCache, getCurrentWeek, getCurrentYear, getPlayerName, getPlayerPosition, getLeagueFull, getFranchiseName, formatDraftPick, formatTimestamp, MFL_COOKIE_NAME } from '$lib/api';
 import type { MFLTransaction } from '$lib/types';
 
 function getTransactionDisplayName(type: string): string {
@@ -82,11 +82,13 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
           
           const addedPlayers = added.map(id => ({
             id,
-            name: getPlayerName(players, id)
+            name: getPlayerName(players, id),
+            position: getPlayerPosition(players, id)?.toUpperCase()
           }));
           const droppedPlayers = dropped.map(id => ({
             id,
-            name: getPlayerName(players, id)
+            name: getPlayerName(players, id),
+            position: getPlayerPosition(players, id)?.toUpperCase()
           }));
           
           const formattedTime = t.timestamp ? formatTimestamp(t.timestamp) : '';

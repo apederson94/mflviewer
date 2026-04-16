@@ -259,7 +259,16 @@
                       <span class="fa-side-header">Added</span>
                       <span class="fa-side-content">
                         {#if transaction.addedPlayers?.length}
-                          {transaction.addedPlayers.map(p => p.name).join(', ')}
+                          <div class="player-list">
+                            {#each transaction.addedPlayers as player}
+                              <span class="player-item">
+                                {#if player.position}
+                                  <span class="position-badge" data-position={player.position}>{player.position}</span>
+                                {/if}
+                                <span class="player-name">{player.name}</span>
+                              </span>
+                            {/each}
+                          </div>
                         {:else}
                           None
                         {/if}
@@ -269,7 +278,16 @@
                       <span class="fa-side-header">Dropped</span>
                       <span class="fa-side-content">
                         {#if transaction.droppedPlayers?.length}
-                          {transaction.droppedPlayers.map(p => p.name).join(', ')}
+                          <div class="player-list">
+                            {#each transaction.droppedPlayers as player}
+                              <span class="player-item">
+                                {#if player.position}
+                                  <span class="position-badge" data-position={player.position}>{player.position}</span>
+                                {/if}
+                                <span class="player-name">{player.name}</span>
+                              </span>
+                            {/each}
+                          </div>
                         {:else}
                           None
                         {/if}
@@ -858,6 +876,92 @@
   }
 
   .fa-side-content {
+  }
+
+  .player-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .player-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .player-name {
+    color: var(--text-primary);
+  }
+
+  .position-badge {
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 0.1rem 0.35rem;
+    border-radius: 3px;
+    text-transform: uppercase;
+  }
+
+  .position-badge[data-position="QB"] {
+    background: rgba(167, 139, 250, 0.2);
+    color: #a78bfa;
+  }
+
+  .position-badge[data-position="RB"] {
+    background: rgba(52, 211, 153, 0.2);
+    color: #34d399;
+  }
+
+  .position-badge[data-position="WR"] {
+    background: rgba(249, 115, 22, 0.2);
+    color: #f97316;
+  }
+
+  .position-badge[data-position="TE"] {
+    background: rgba(96, 165, 250, 0.2);
+    color: #60a5fa;
+  }
+
+  .position-badge[data-position="K"] {
+    background: rgba(244, 114, 182, 0.2);
+    color: #f472b6;
+  }
+
+  .position-badge[data-position="DT"] {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+  }
+
+  .position-badge[data-position="DE"] {
+    background: rgba(249, 115, 22, 0.2);
+    color: #f97316;
+  }
+
+  .position-badge[data-position="LB"] {
+    background: rgba(99, 102, 241, 0.2);
+    color: #6366f1;
+  }
+
+  .position-badge[data-position="CB"] {
+    background: rgba(139, 92, 246, 0.2);
+    color: #8b5cf6;
+  }
+
+  .position-badge[data-position="S"] {
+    background: rgba(20, 184, 166, 0.2);
+    color: #14b8a6;
+  }
+
+  .position-badge[data-position="DST"],
+  .position-badge[data-position="DEF"],
+  .position-badge[data-position="DFL"] {
+    background: rgba(251, 191, 36, 0.25);
+    color: #fbbf24;
+  }
+
+  .position-badge[data-position="UNK"] {
+    background: rgba(100, 116, 139, 0.2);
+    color: #94a3b8;
   }
 
   .tx-content {
