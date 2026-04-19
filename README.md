@@ -1,42 +1,37 @@
-# sv
+# MFL Transaction Viewer
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+A SvelteKit web application for viewing fantasy football transactions from MyFantasyLeague.
 
-## Creating a project
+## Features
 
-If you're seeing this, you've probably already done this step. Congrats!
+- **Multi-League Support** - Select from any of your MFL leagues
+- **Transaction Types** - View Add/Drop, Trade, and Waiver transactions
+- **Position Badges** - Color-coded badges identify player positions
+- **Responsive Design** - Works on desktop and mobile devices
+- **Dark Theme** - Modern dark UI with vibrant accent colors
 
-```sh
-# create a new project
-npx sv create my-app
+## Getting Started
+
+### Installation
+
+```bash
+npm install
 ```
 
-To recreate this project with the same configuration:
+### Development
 
-```sh
-# recreate this project
-npx sv@0.15.0 create --template minimal --types ts --install npm .
-```
-
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```sh
+```bash
 npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
 ```
 
-## Building
+### Build
 
-To create a production version of your app:
-
-```sh
+```bash
 npm run build
 ```
 
-You can preview the production build with `npm run preview`.
+## Tech Stack
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+- Svelte 5 / SvelteKit
+- TypeScript
+- MFL API Integration
