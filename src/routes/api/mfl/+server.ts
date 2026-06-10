@@ -63,19 +63,24 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
               if (cleanId.startsWith('FP_') || cleanId.startsWith('DP_')) {
                 return { id: cleanId, name: formatDraftPick(cleanId, currentYear), position: 'PICK' };
               }
-              return { id: cleanId, name: getPlayerName(players, cleanId), position: getPlayerPosition(players, cleanId)?.toUpperCase() };
+              const rosterPct = players.get(cleanId)?.rosterPct;
+              return { id: cleanId, name: getPlayerName(players, cleanId), position: getPlayerPosition(players, cleanId)?.toUpperCase(), rosterPct };
             });
             const f2Names = f2Gave.map(id => {
               const cleanId = id.trim();
               if (cleanId.startsWith('FP_') || cleanId.startsWith('DP_')) {
                 return { id: cleanId, name: formatDraftPick(cleanId, currentYear), position: 'PICK' };
               }
-              return { id: cleanId, name: getPlayerName(players, cleanId), position: getPlayerPosition(players, cleanId)?.toUpperCase() };
+              const rosterPct = players.get(cleanId)?.rosterPct;
+              return { id: cleanId, name: getPlayerName(players, cleanId), position: getPlayerPosition(players, cleanId)?.toUpperCase(), rosterPct };
             });
 
             const tradePartnerId = t.franchise === t.franchise ? t.franchise2 : t.franchise;
             const tradePartnerName = getFranchiseName(franchiseMap, tradePartnerId || t.franchise2 || '');
             const formattedTime = t.timestamp ? formatTimestamp(t.timestamp) : '';
+
+            const allPlayers = [...f1Names, ...f2Names];
+            const maxRosterPct = Math.max(...allPlayers.map(p => p.rosterPct ?? 0), 0);
 
             return {
               ...t,
@@ -86,7 +91,8 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
               tradePartnerName: t.franchise2 ? getFranchiseName(franchiseMap, t.franchise2) : undefined,
               tradeGives: f1Names,
               tradeReceives: f2Names,
-              formattedTime
+              formattedTime,
+              maxRosterPct
             };
           }
           
@@ -111,18 +117,18 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
             bid = t.bid;
           }
           
-          const addedPlayers = added.map(id => ({
-            id,
-            name: getPlayerName(players, id),
-            position: getPlayerPosition(players, id)?.toUpperCase()
-          }));
-          const droppedPlayers = dropped.map(id => ({
-            id,
-            name: getPlayerName(players, id),
-            position: getPlayerPosition(players, id)?.toUpperCase()
-          }));
+          const addedPlayers = added.map(id => {
+            const rosterPct = players.get(id)?.rosterPct;
+            return { id, name: getPlayerName(players, id), position: getPlayerPosition(players, id)?.toUpperCase(), rosterPct };
+          });
+          const droppedPlayers = dropped.map(id => {
+            const rosterPct = players.get(id)?.rosterPct;
+            return { id, name: getPlayerName(players, id), position: getPlayerPosition(players, id)?.toUpperCase(), rosterPct };
+          });
           
           const formattedTime = t.timestamp ? formatTimestamp(t.timestamp) : '';
+          const allPlayers = [...addedPlayers, ...droppedPlayers];
+          const maxRosterPct = Math.max(...allPlayers.map(p => p.rosterPct ?? 0), 0);
           return {
             ...t,
             type: getTransactionDisplayName(t.type),
@@ -132,8 +138,14 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
             playerName: [...addedPlayers.map(p => p.name), ...droppedPlayers.map(p => p.name)].join(', ') || undefined,
             franchiseName,
             formattedTime,
-            bid
+            bid,
+            maxRosterPct
           };
+        });
+        transactionsWithNames.sort((a, b) => {
+          const pctDiff = (b.maxRosterPct || 0) - (a.maxRosterPct || 0);
+          if (pctDiff !== 0) return pctDiff;
+          return (parseInt(b.timestamp || '0', 10) - parseInt(a.timestamp || '0', 10));
         });
         return json({ transactions: transactionsWithNames });
       }

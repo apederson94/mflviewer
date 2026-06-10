@@ -8,7 +8,7 @@
   let leagues = $state(data.leagues ?? []);
   let selectedLeague = $state<StoredLeague | null>(null);
   let transactions = $state<MFLTransaction[]>([]);
-  let playerCache = $state(new Map((data.players || []) as [string, { name: string; position: string }][]));
+  let playerCache = $state(new Map((data.players || []) as [string, { name: string; position: string; rosterPct?: number }][]));
   let loading = $state(false);
   let error = $state<string | null>(null);
   let loginUsername = $state('');
@@ -259,6 +259,7 @@
                                   <span class="position-badge" data-position={player.position}>{player.position}</span>
                                 {/if}
                                 <span class="player-name">{player.name}</span>
+                                {#if player.rosterPct != null}<span class="roster-badge">{player.rosterPct.toFixed(1)}%</span>{/if}
                               </div>
                             {/each}
                           </div>
@@ -278,6 +279,7 @@
                                   <span class="position-badge" data-position={player.position}>{player.position}</span>
                                 {/if}
                                 <span class="player-name">{player.name}</span>
+                                {#if player.rosterPct != null}<span class="roster-badge">{player.rosterPct.toFixed(1)}%</span>{/if}
                               </div>
                             {/each}
                           </div>
@@ -306,6 +308,7 @@
                                   <span class="position-badge" data-position={player.position}>{player.position}</span>
                                 {/if}
                                 <span class="player-name">{player.name}</span>
+                                {#if player.rosterPct != null}<span class="roster-badge">{player.rosterPct.toFixed(1)}%</span>{/if}
                               </span>
                             {/each}
                           </div>
@@ -325,6 +328,7 @@
                                   <span class="position-badge" data-position={player.position}>{player.position}</span>
                                 {/if}
                                 <span class="player-name">{player.name}</span>
+                                {#if player.rosterPct != null}<span class="roster-badge">{player.rosterPct.toFixed(1)}%</span>{/if}
                               </span>
                             {/each}
                           </div>
@@ -720,6 +724,17 @@
   .timeframe-bar select:focus {
     outline: none;
     border-color: var(--accent);
+  }
+
+  .roster-badge {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 0.075rem 0.3rem;
+    margin-left: 0.25rem;
+    white-space: nowrap;
   }
 
   .transactions-list {

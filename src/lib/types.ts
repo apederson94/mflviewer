@@ -3,6 +3,12 @@ export interface MFLLeague {
   name: string;
 }
 
+export interface PlayerInfo {
+  name: string;
+  position: string;
+  rosterPct?: number;
+}
+
 export interface MFLPlayer {
   id: string;
   name: string;
@@ -17,6 +23,18 @@ export interface TransactionPlayer {
   id: string;
   name: string;
   position?: string;
+  rosterPct?: number;
+}
+
+export interface MFLTopOwnsPlayer {
+  id: string;
+  percent: string;
+}
+
+export interface MFLTopOwnsResponse {
+  topOwns: {
+    player: MFLTopOwnsPlayer[];
+  };
 }
 
 export interface MFLTransaction {

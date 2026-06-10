@@ -3,9 +3,11 @@ import type {
   MFLTransaction,
   MFLMyLeaguesResponse,
   MFLPlayersResponse,
+  MFLTopOwnsResponse,
   StoredLeague,
   MFLFranchise,
-  MFLLeagueResponse
+  MFLLeagueResponse,
+  PlayerInfo
 } from './types';
 
 import type { MFLLoginResponse } from './types';
@@ -25,7 +27,7 @@ interface YearWeekCache {
 let yearWeekCache: YearWeekCache | null = null;
 
 interface PlayerCache {
-  players: Map<string, { name: string; position: string }>;
+  players: Map<string, PlayerInfo>;
   timestamp: number;
 }
 
@@ -224,23 +226,28 @@ console.error(`Fetch full league ${leagueId} failed: ${error}`);
   }
 }
 
-export async function loadPlayerCache(cookie?: string): Promise<Map<string, { name: string; position: string }>> {
+export async function loadPlayerCache(cookie?: string): Promise<Map<string, PlayerInfo>> {
   if (isPlayerCacheValid() && playerCache) {
     return playerCache.players;
   }
 
   const baseUrl = await getBaseUrl();
-  const url = `${baseUrl}?TYPE=players&JSON=1`;
-  const playerCacheMap = new Map<string, { name: string; position: string }>();
+  const playersUrl = `${baseUrl}?TYPE=players&JSON=1`;
+  const ownsUrl = `${baseUrl}?TYPE=topOwns&JSON=1&COUNT=10000`;
+  const playerCacheMap = new Map<string, PlayerInfo>();
   
   console.log(`Fetching players, cookie present: ${!!cookie}`);
   
   try {
-    const response = await fetchJSON<MFLPlayersResponse>(url, cookie);
-    const payloadSize = JSON.stringify(response).length;
-    if (response.players?.player) {
-      const players = toArray(response.players.player);
-      
+    const [playerRes, ownsRes] = await Promise.all([
+      fetchJSON<MFLPlayersResponse>(playersUrl, cookie),
+      fetchJSON<MFLTopOwnsResponse>(ownsUrl),
+    ]);
+
+    const payloadSize = JSON.stringify(playerRes).length;
+
+    if (playerRes.players?.player) {
+      const players = toArray(playerRes.players.player);
       players.forEach(player => {
         playerCacheMap.set(player.id, {
           name: player.name,
@@ -248,7 +255,17 @@ export async function loadPlayerCache(cookie?: string): Promise<Map<string, { na
         });
       });
     }
-    
+
+    if (ownsRes.topOwns?.player) {
+      const owns = toArray(ownsRes.topOwns.player);
+      owns.forEach(({ id, percent }) => {
+        const existing = playerCacheMap.get(id);
+        if (existing) {
+          existing.rosterPct = parseFloat(percent);
+        }
+      });
+    }
+
     playerCache = {
       players: playerCacheMap,
       timestamp: Date.now()
@@ -262,12 +279,12 @@ export async function loadPlayerCache(cookie?: string): Promise<Map<string, { na
   return playerCacheMap;
 }
 
-export function getPlayerName(playerCache: Map<string, { name: string; position: string }>, playerId: string): string {
+export function getPlayerName(playerCache: Map<string, PlayerInfo>, playerId: string): string {
   const player = playerCache.get(playerId);
   return player?.name || `Unknown (${playerId})`;
 }
 
-export function getPlayerPosition(playerCache: Map<string, { name: string; position: string }>, playerId: string): string {
+export function getPlayerPosition(playerCache: Map<string, PlayerInfo>, playerId: string): string {
   const player = playerCache.get(playerId);
   return player?.position || 'UNK';
 }
