@@ -338,7 +338,7 @@ export async function getTransactions(
     const other = otherRes.transactions?.transaction ? toArray(otherRes.transactions.transaction) : [];
 
     const merged = [...waivers, ...other];
-    merged.sort((a, b) => ((b.timestamp || '') < (a.timestamp || '') ? 1 : -1));
+    merged.sort((a, b) => (parseInt(b.timestamp || '0', 10) - parseInt(a.timestamp || '0', 10)));
 
     console.log(`Fetched ${merged.length} transactions for league ${leagueId} (${waivers.length} waivers, ${other.length} other)`);
     return merged;
