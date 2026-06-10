@@ -20,6 +20,14 @@ function parseFreeAgentTransaction(transaction: string): { added: string[]; drop
   return { added, dropped };
 }
 
+function parseBBIDWaiverTransaction(transaction: string): { added: string[]; dropped: string[]; bid: string } {
+  const parts = transaction.split('|');
+  const added = parts[0]?.split(',').map(id => id.trim()).filter(Boolean) || [];
+  const bid = parts[1]?.trim() || '';
+  const dropped = parts[2]?.split(',').map(id => id.trim()).filter(Boolean) || [];
+  return { added, dropped, bid };
+}
+
 export const GET: RequestHandler = async ({ cookies, url }) => {
   const cookie = cookies.get(MFL_COOKIE_NAME);
   const type = url.searchParams.get('type');
@@ -82,10 +90,26 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
             };
           }
           
-          // FREE_AGENT or other
-          const { added, dropped } = t.transaction 
-            ? parseFreeAgentTransaction(t.transaction)
-            : { added: [] as string[], dropped: [] as string[] };
+          // BBID_WAIVER: add_player|price|drop_player
+          // FREE_AGENT/WAIVER: added_players|dropped_players
+          let bid: string | undefined;
+          let added: string[];
+          let dropped: string[];
+          if (t.type === 'BBID_WAIVER' && t.transaction) {
+            const parsed = parseBBIDWaiverTransaction(t.transaction);
+            added = parsed.added;
+            dropped = parsed.dropped;
+            bid = parsed.bid;
+          } else if (t.transaction) {
+            const parsed = parseFreeAgentTransaction(t.transaction);
+            added = parsed.added;
+            dropped = parsed.dropped;
+            bid = t.bid;
+          } else {
+            added = [];
+            dropped = [];
+            bid = t.bid;
+          }
           
           const addedPlayers = added.map(id => ({
             id,
@@ -107,7 +131,8 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
             playerNames: [...addedPlayers.map(p => p.name), ...droppedPlayers.map(p => p.name)],
             playerName: [...addedPlayers.map(p => p.name), ...droppedPlayers.map(p => p.name)].join(', ') || undefined,
             franchiseName,
-            formattedTime
+            formattedTime,
+            bid
           };
         });
         return json({ transactions: transactionsWithNames });
