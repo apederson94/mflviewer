@@ -8,6 +8,7 @@ function getTransactionDisplayName(type: string): string {
     case 'FREE_AGENT': return 'Add/Drop';
     case 'TRADE': return 'Trade';
     case 'WAIVER': return 'Waiver';
+    case 'BBID_WAIVER': return 'Waiver';
     default: return type;
   }
 }

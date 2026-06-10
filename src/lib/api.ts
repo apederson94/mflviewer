@@ -316,7 +316,7 @@ export async function getTransactions(
   week?: number
 ): Promise<MFLTransaction[]> {
   const baseUrl = await getBaseUrl();
-  let url = `${baseUrl}?TYPE=transactions&L=${leagueId}&TRANS_TYPE=WAIVER,FREE_AGENT,TRADE&JSON=1`;
+  let url = `${baseUrl}?TYPE=transactions&L=${leagueId}&TRANS_TYPE=WAIVER,FREE_AGENT,TRADE,BBID_WAIVER&JSON=1`;
   
   if (days) {
     url += `&DAYS=${days}`;
