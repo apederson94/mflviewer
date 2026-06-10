@@ -316,30 +316,32 @@ export async function getTransactions(
   week?: number
 ): Promise<MFLTransaction[]> {
   const baseUrl = await getBaseUrl();
-  let url = `${baseUrl}?TYPE=transactions&L=${leagueId}&TRANS_TYPE=WAIVER,FREE_AGENT,TRADE,BBID_WAIVER&JSON=1`;
-  
+  const base = `TYPE=transactions&L=${leagueId}&JSON=1`;
+
+  let timeParam = '';
   if (days) {
-    url += `&DAYS=${days}`;
+    timeParam = `&DAYS=${days}`;
   } else if (week) {
-    url += `&W=${week}`;
+    timeParam = `&W=${week}`;
   }
-  
-  console.log(`Fetching transactions for league ${leagueId}`);
-  
+
+  const waiversUrl = `${baseUrl}?${base}&TRANS_TYPE=BBID_WAIVER,WAIVER${timeParam}`;
+  const otherUrl = `${baseUrl}?${base}&TRANS_TYPE=FREE_AGENT,TRADE${timeParam}`;
+
   try {
-    const response = await fetchJSON<MFLTransactionsResponse>(url, cookie);
-    const payloadSize = JSON.stringify(response).length;
-    const hasTransactions = response.transactions?.transaction;
-    const rawTx = response.transactions?.transaction;
-    const txCount = rawTx ? toArray(rawTx).length : 0;
-    
-    console.log(`Fetched ${txCount} transactions for league ${leagueId}, payload bytes: ${payloadSize}, success: true`);
-    
-    if (!response.transactions?.transaction) {
-      return [];
-    }
-    
-    return toArray(response.transactions.transaction);
+    const [waiversRes, otherRes] = await Promise.all([
+      fetchJSON<MFLTransactionsResponse>(waiversUrl, cookie),
+      fetchJSON<MFLTransactionsResponse>(otherUrl, cookie),
+    ]);
+
+    const waivers = waiversRes.transactions?.transaction ? toArray(waiversRes.transactions.transaction) : [];
+    const other = otherRes.transactions?.transaction ? toArray(otherRes.transactions.transaction) : [];
+
+    const merged = [...waivers, ...other];
+    merged.sort((a, b) => ((b.timestamp || '') < (a.timestamp || '') ? 1 : -1));
+
+    console.log(`Fetched ${merged.length} transactions for league ${leagueId} (${waivers.length} waivers, ${other.length} other)`);
+    return merged;
   } catch (error) {
     console.error(`Fetch transactions for league ${leagueId} failed: ${error}`);
     throw error;

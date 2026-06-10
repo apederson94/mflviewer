@@ -16,12 +16,13 @@
   let formLoading = $state(false);
 
   let isLoggedIn = $derived(data.loggedIn);
+  let selectedDays = $state('7');
 
   async function loadTransactions(leagueId: string) {
     loading = true;
     error = null;
     try {
-      const res = await fetch(`/api/mfl?type=transactions&league=${leagueId}`);
+      const res = await fetch(`/api/mfl?type=transactions&league=${leagueId}&days=${selectedDays}`);
       const data = await res.json();
       if (data.error) {
         throw new Error(data.error);
@@ -221,6 +222,15 @@
       {/if}
       
       {#if selectedLeague}
+        <div class="timeframe-bar">
+          <label for="days-select">Timeframe:</label>
+          <select id="days-select" bind:value={selectedDays} onchange={() => loadTransactions(selectedLeague!.id)}>
+            <option value="7">7 days</option>
+            <option value="14">14 days</option>
+            <option value="30">30 days</option>
+            <option value="all">All (current year)</option>
+          </select>
+        </div>
         {#if loading}
           <div class="loading">Loading transactions...</div>
         {:else if transactions.length > 0}
@@ -679,6 +689,37 @@
 
   @keyframes spin {
     to { transform: rotate(360deg); }
+  }
+
+  .timeframe-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+  }
+
+  .timeframe-bar label {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+  }
+
+  .timeframe-bar select {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+
+  .timeframe-bar select:focus {
+    outline: none;
+    border-color: var(--accent);
   }
 
   .transactions-list {

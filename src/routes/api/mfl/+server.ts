@@ -32,7 +32,8 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
   const cookie = cookies.get(MFL_COOKIE_NAME);
   const type = url.searchParams.get('type');
   const leagueId = url.searchParams.get('league');
-  const days = url.searchParams.get('days') ? parseInt(url.searchParams.get('days')!) : undefined;
+  const daysParam = url.searchParams.get('days');
+  const days = daysParam === 'all' ? undefined : (parseInt(daysParam || '7') || 7);
 
   try {
     switch (type) {
@@ -45,9 +46,8 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
         if (!leagueId) {
           return json({ error: 'League ID required' }, { status: 400 });
         }
-        const currentWeek = await getCurrentWeek();
         const currentYear = await getCurrentYear();
-        const transactions = await getTransactions(leagueId, cookie, days, currentWeek);
+        const transactions = await getTransactions(leagueId, cookie, days);
         const players = await loadPlayerCache(cookie);
         const league = await getLeagueFull(leagueId, cookie);
         const franchiseMap = league?.franchises || new Map<string, string>();
@@ -137,7 +137,7 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
         });
         return json({ transactions: transactionsWithNames });
       }
-      
+
       case 'players': {
         const players = await loadPlayerCache(cookie);
         return json({ players: Array.from(players.entries()) });
