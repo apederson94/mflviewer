@@ -51,7 +51,8 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
         const players = await loadPlayerCache(cookie);
         const league = await getLeagueFull(leagueId, cookie);
         const franchiseMap = league?.franchises || new Map<string, string>();
-        const transactionsWithNames = transactions.map(t => {
+        const includeTrades = url.searchParams.get('includeTrades') === 'true';
+        const enriched = transactions.map(t => {
           const franchiseName = getFranchiseName(franchiseMap, t.franchise);
           
           if (t.type === 'TRADE') {
@@ -128,7 +129,7 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
           
           const formattedTime = t.timestamp ? formatTimestamp(t.timestamp) : '';
           const allPlayers = [...addedPlayers, ...droppedPlayers];
-          const maxRosterPct = Math.max(...allPlayers.map(p => p.rosterPct ?? 0), 0);
+          const maxRosterPct = Math.max(...droppedPlayers.map(p => p.rosterPct ?? 0), 0);
           return {
             ...t,
             type: getTransactionDisplayName(t.type),
@@ -142,12 +143,13 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
             maxRosterPct
           };
         });
-        transactionsWithNames.sort((a, b) => {
+        let filtered = includeTrades ? enriched : enriched.filter(t => t.type !== 'Trade');
+        filtered.sort((a, b) => {
           const pctDiff = (b.maxRosterPct || 0) - (a.maxRosterPct || 0);
           if (pctDiff !== 0) return pctDiff;
           return (parseInt(b.timestamp || '0', 10) - parseInt(a.timestamp || '0', 10));
         });
-        return json({ transactions: transactionsWithNames });
+        return json({ transactions: filtered });
       }
 
       case 'players': {

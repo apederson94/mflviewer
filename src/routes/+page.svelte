@@ -17,12 +17,13 @@
 
   let isLoggedIn = $derived(data.loggedIn);
   let selectedDays = $state('7');
+  let showTrades = $state(false);
 
   async function loadTransactions(leagueId: string) {
     loading = true;
     error = null;
     try {
-      const res = await fetch(`/api/mfl?type=transactions&league=${leagueId}&days=${selectedDays}`);
+      const res = await fetch(`/api/mfl?type=transactions&league=${leagueId}&days=${selectedDays}&includeTrades=${showTrades}`);
       const data = await res.json();
       if (data.error) {
         throw new Error(data.error);
@@ -230,6 +231,10 @@
             <option value="30">30 days</option>
             <option value="all">All (current year)</option>
           </select>
+          <label class="trade-toggle">
+            <input type="checkbox" bind:checked={showTrades} onchange={() => loadTransactions(selectedLeague!.id)} />
+            Show Trades
+          </label>
         </div>
         {#if loading}
           <div class="loading">Loading transactions...</div>
@@ -724,6 +729,20 @@
   .timeframe-bar select:focus {
     outline: none;
     border-color: var(--accent);
+  }
+
+  .trade-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    cursor: pointer;
+    margin-left: auto;
+  }
+
+  .trade-toggle input {
+    cursor: pointer;
   }
 
   .roster-badge {
