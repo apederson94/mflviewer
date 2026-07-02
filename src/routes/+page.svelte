@@ -320,7 +320,6 @@
                 <div class="transaction-header">
                   <span class="transaction-type">{transaction.type}</span>
                   <span class="league-tag">{transaction.leagueName}</span>
-                  <span class="transaction-week">Week {transaction.week}</span>
                 </div>
                 {#if transaction.type === 'Trade' && transaction.tradeGives && transaction.tradeReceives}
                   <div class="trade-header">
@@ -975,14 +974,6 @@
 
   .transaction-card:not([data-type="Trade"]):not([data-type="FA Pickup"]):not([data-type="Free Agent"]):not([data-type="Add/Drop"]):not([data-type="Waiver"]) .transaction-type {
     color: var(--text-secondary);
-  }
-
-  .transaction-week {
-    color: var(--text-secondary);
-    font-size: 0.85rem;
-    padding: 0.2rem 0.5rem;
-    background: rgba(100, 116, 139, 0.2);
-    border-radius: 4px;
   }
 
   .league-tag {
