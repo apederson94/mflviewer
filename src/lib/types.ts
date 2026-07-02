@@ -62,6 +62,9 @@ export interface MFLTransaction {
   formattedTime?: string;
   addedPlayers?: TransactionPlayer[];
   droppedPlayers?: TransactionPlayer[];
+  maxRosterPct?: number;
+  leagueId?: string;
+  leagueName?: string;
 }
 
 export interface MFLTransactionsResponse {

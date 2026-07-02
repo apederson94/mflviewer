@@ -6,7 +6,7 @@
   let { data }: { data: PageData } = $props();
 
   let leagues = $state(data.leagues ?? []);
-  let selectedLeague = $state<StoredLeague | null>(null);
+  let selectedLeagueIds = $state(new Set<string>(data.leagues?.map(l => l.id) ?? []));
   let transactions = $state<MFLTransaction[]>([]);
   let playerCache = $state(new Map((data.players || []) as [string, { name: string; position: string; rosterPct?: number }][]));
   let loading = $state(false);
@@ -18,12 +18,37 @@
   let isLoggedIn = $derived(data.loggedIn);
   let selectedDays = $state('7');
   let showTrades = $state(false);
+  let mobileFilterOpen = $state(false);
+  let leagueSearch = $state('');
 
-  async function loadTransactions(leagueId: string) {
+  let filteredLeagues = $derived(
+    leagueSearch
+      ? leagues.filter(l =>
+          l.name.toLowerCase().includes(leagueSearch.toLowerCase()) ||
+          l.id.includes(leagueSearch)
+        )
+      : leagues
+  );
+
+  let filteredAllSelected = $derived(
+    filteredLeagues.length > 0 && filteredLeagues.every(l => selectedLeagueIds.has(l.id))
+  );
+
+  let selectedCount = $derived(selectedLeagueIds.size);
+
+  function toggleMobileFilter() {
+    mobileFilterOpen = !mobileFilterOpen;
+  }
+
+  async function loadTransactions(leagueIds: string[]) {
+    if (leagueIds.length === 0) {
+      transactions = [];
+      return;
+    }
     loading = true;
     error = null;
     try {
-      const res = await fetch(`/api/mfl?type=transactions&league=${leagueId}&days=${selectedDays}&includeTrades=${showTrades}`);
+      const res = await fetch(`/api/mfl?type=transactions&league=${leagueIds.join(',')}&days=${selectedDays}&includeTrades=${showTrades}`);
       const data = await res.json();
       if (data.error) {
         throw new Error(data.error);
@@ -92,16 +117,36 @@
     }
   }
 
-  function handleSelectLeague(league: StoredLeague) {
-    selectedLeague = league;
-    loadTransactions(league.id);
+  function handleLeagueToggle(leagueId: string) {
+    const next = new Set(selectedLeagueIds);
+    if (next.has(leagueId)) {
+      next.delete(leagueId);
+    } else {
+      next.add(leagueId);
+    }
+    selectedLeagueIds = next;
+    loadTransactions(Array.from(next));
   }
 
-  function handleMobileLeagueChange(e: Event) {
-    const target = e.target as HTMLSelectElement;
-    const league = leagues.find(l => l.id === target.value);
-    if (league) handleSelectLeague(league);
+  function handleSelectAll() {
+    const next = new Set(selectedLeagueIds);
+    for (const l of filteredLeagues) next.add(l.id);
+    selectedLeagueIds = next;
+    loadTransactions(Array.from(next));
   }
+
+  function handleSelectNone() {
+    const next = new Set(selectedLeagueIds);
+    for (const l of filteredLeagues) next.delete(l.id);
+    selectedLeagueIds = next;
+    loadTransactions(Array.from(next));
+  }
+
+  onMount(() => {
+    if (isLoggedIn && selectedLeagueIds.size > 0) {
+      loadTransactions(Array.from(selectedLeagueIds));
+    }
+  });
 
   
 </script>
@@ -116,20 +161,6 @@
       <h1>MFL Transaction Viewer <span class="week">Week {data.week}</span></h1>
     </div>
     <div class="header-mobile-controls">
-      <div class="mobile-league-selector-wrapper">
-        {#if isLoggedIn}
-          <select 
-            class="mobile-league-selector"
-            value={selectedLeague?.id || ''}
-            onchange={handleMobileLeagueChange}
-          >
-            <option value="" disabled>Select a league</option>
-            {#each leagues as league}
-              <option value={league.id}>{league.name}</option>
-            {/each}
-          </select>
-        {/if}
-      </div>
       <div class="auth-row-mobile">
           {#if isLoggedIn}
             <button onclick={handleLogout} class="login-btn">Logout</button>
@@ -176,9 +207,12 @@
   </header>
   
   <div class="main-content">
-    <aside class="sidebar">
+    <aside class="sidebar" class:open={mobileFilterOpen}>
+      <div class="sidebar-header">
+        <button class="sidebar-close" onclick={toggleMobileFilter} aria-label="Close filters">✕</button>
+      </div>
       <div class="sidebar-content">
-        <h2>My Leagues</h2>
+        <h2>Filters</h2>
         
         {#if data.error}
           <p class="error">{data.error}</p>
@@ -188,20 +222,51 @@
           <p class="login-prompt">Log in to view your leagues</p>
         {/if}
         
-        <ul class="league-list">
-          {#each leagues as league (league.id)}
-            <li
-              class="league-item {selectedLeague?.id === league.id ? 'active' : ''}"
-              onclick={() => handleSelectLeague(league)}
-              role="button"
-              tabindex="0"
-              onkeydown={(e) => e.key === 'Enter' && handleSelectLeague(league)}
-            >
-              <span class="league-name">{league.name}</span>
-              <span class="league-id">{league.id}</span>
-            </li>
-          {/each}
-        </ul>
+        {#if isLoggedIn}
+          <input
+            class="league-search"
+            type="text"
+            placeholder="Search leagues..."
+            bind:value={leagueSearch}
+          />
+          <div class="filter-actions">
+            <button class="filter-btn" onclick={handleSelectAll} disabled={filteredAllSelected}>All</button>
+            <button class="filter-btn" onclick={handleSelectNone} disabled={filteredLeagues.every(l => !selectedLeagueIds.has(l.id))}>None</button>
+          </div>
+          <div class="selection-count">{selectedCount} of {leagues.length} selected</div>
+          <ul class="league-filter-list">
+            {#each filteredLeagues as league (league.id)}
+              <li class="league-filter-item">
+                <label class="league-checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={selectedLeagueIds.has(league.id)}
+                    onchange={() => handleLeagueToggle(league.id)}
+                  />
+                  <span class="league-name">{league.name}</span>
+                  <span class="league-id">{league.id}</span>
+                </label>
+              </li>
+            {/each}
+          </ul>
+          {#if leagueSearch && filteredLeagues.length === 0}
+            <p class="no-data">No leagues match your search</p>
+          {/if}
+          <div class="sidebar-divider"></div>
+          <div class="sidebar-timeframe">
+            <label for="days-select-sidebar" class="sidebar-label">Timeframe</label>
+            <select id="days-select-sidebar" bind:value={selectedDays} onchange={() => loadTransactions(Array.from(selectedLeagueIds))}>
+              <option value="7">7 days</option>
+              <option value="14">14 days</option>
+              <option value="30">30 days</option>
+              <option value="all">All (current year)</option>
+            </select>
+          </div>
+          <label class="sidebar-trade-toggle">
+            <input type="checkbox" bind:checked={showTrades} onchange={() => loadTransactions(Array.from(selectedLeagueIds))} />
+            Show Trades
+          </label>
+        {/if}
         
         {#if leagues.length === 0 && isLoggedIn && !data.error}
           <p class="no-data">No leagues found</p>
@@ -217,23 +282,32 @@
       </a>
     </aside>
     
+    <div class="mobile-backdrop" class:open={mobileFilterOpen} onclick={toggleMobileFilter}></div>
+    
     <main class="content">
       {#if error}
         <div class="error">{error}</div>
       {/if}
       
-      {#if selectedLeague}
-        <div class="timeframe-bar">
-          <label for="days-select">Timeframe:</label>
-          <select id="days-select" bind:value={selectedDays} onchange={() => loadTransactions(selectedLeague!.id)}>
+      {#if selectedLeagueIds.size > 0}
+        <div class="mobile-toolbar">
+          <button class="mobile-filters-btn" onclick={toggleMobileFilter}>
+            <span class="mobile-filters-icon">☰</span>
+            <span class="mobile-filters-label">Filters</span>
+            {#if selectedLeagueIds.size !== leagues.length}
+              <span class="mobile-filters-count">{selectedLeagueIds.size}/{leagues.length}</span>
+            {/if}
+          </button>
+          <div class="mobile-toolbar-spacer"></div>
+          <select class="mobile-toolbar-select" bind:value={selectedDays} onchange={() => loadTransactions(Array.from(selectedLeagueIds))}>
             <option value="7">7 days</option>
             <option value="14">14 days</option>
             <option value="30">30 days</option>
-            <option value="all">All (current year)</option>
+            <option value="all">All</option>
           </select>
-          <label class="trade-toggle">
-            <input type="checkbox" bind:checked={showTrades} onchange={() => loadTransactions(selectedLeague!.id)} />
-            Show Trades
+          <label class="mobile-toolbar-trades">
+            <input type="checkbox" bind:checked={showTrades} onchange={() => loadTransactions(Array.from(selectedLeagueIds))} />
+            Trades
           </label>
         </div>
         {#if loading}
@@ -245,6 +319,7 @@
               <div class="transaction-card" data-type={transaction.type}>
                 <div class="transaction-header">
                   <span class="transaction-type">{transaction.type}</span>
+                  <span class="league-tag">{transaction.leagueName}</span>
                   <span class="transaction-week">Week {transaction.week}</span>
                 </div>
                 {#if transaction.type === 'Trade' && transaction.tradeGives && transaction.tradeReceives}
@@ -352,12 +427,12 @@
           </div>
         {:else}
           <div class="no-data">
-            No transactions found for this league
+            No transactions found — try expanding the timeframe or selecting more leagues
           </div>
         {/if}
       {:else}
         <div class="no-data">
-          Select a league from the sidebar to view transactions
+          Select at least one league to view transactions
         </div>
       {/if}
     </main>
@@ -553,55 +628,51 @@
     padding: 1rem;
   }
 
-  .league-list {
+  .league-filter-list {
     list-style: none;
     padding: 0;
     margin: 0;
+    max-height: 320px;
+    overflow-y: auto;
   }
 
-  .league-item {
+  .league-filter-list::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .league-filter-list::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .league-filter-list::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 3px;
+  }
+
+  .league-filter-item {
+    margin-bottom: 0.25rem;
+  }
+
+  .league-checkbox-label {
     display: flex;
     align-items: center;
-    padding: 0.75rem;
-    border-radius: 8px;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border-radius: 6px;
     cursor: pointer;
-    margin-bottom: 0.5rem;
-    transition: all 0.2s ease;
-    border: 1px solid transparent;
-    position: relative;
-    overflow: hidden;
+    transition: background 0.2s ease;
   }
 
-  .league-item::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 3px;
-    background: var(--accent);
-    opacity: 0;
-    transition: opacity 0.2s ease;
+  .league-checkbox-label:hover {
+    background: rgba(51, 65, 85, 0.4);
   }
 
-  .league-item:hover {
-    background: rgba(51, 65, 85, 0.5);
-    transform: translateX(4px);
-  }
-
-  .league-item:hover::before {
-    opacity: 0.5;
-  }
-
-  .league-item.active {
-    background: linear-gradient(135deg, rgba(34, 211, 238, 0.15) 0%, rgba(34, 211, 238, 0.05) 100%);
-    border-color: var(--accent);
-    box-shadow: 0 0 20px rgba(34, 211, 238, 0.15);
-  }
-
-  .league-item.active::before {
-    opacity: 1;
-    background: var(--accent);
+  .league-checkbox-label input[type="checkbox"] {
+    accent-color: var(--accent);
+    width: 1rem;
+    height: 1rem;
+    cursor: pointer;
+    flex-shrink: 0;
   }
 
   .league-name {
@@ -613,17 +684,68 @@
     white-space: nowrap;
   }
 
-  .league-item.active .league-name {
-    font-weight: 600;
-  }
-
   .league-id {
     color: var(--text-muted);
     font-size: 0.75rem;
-    margin-left: 0.5rem;
     padding: 0.15rem 0.4rem;
     background: rgba(100, 116, 139, 0.2);
     border-radius: 4px;
+    flex-shrink: 0;
+  }
+
+  .league-search {
+    width: 100%;
+    padding: 0.5rem;
+    margin-bottom: 0.75rem;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.85rem;
+    box-sizing: border-box;
+  }
+
+  .league-search:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  .league-search::placeholder {
+    color: var(--text-muted);
+  }
+
+  .selection-count {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .filter-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .filter-btn {
+    flex: 1;
+    padding: 0.35rem 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .filter-btn:hover:not(:disabled) {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .filter-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
   }
 
   .no-data {
@@ -639,10 +761,6 @@
     background: var(--bg-primary);
     overflow-y: auto;
     height: calc(100vh - 65px);
-  }
-
-  .mobile-league-selector-wrapper {
-    display: none;
   }
 
   .header-mobile-controls {
@@ -700,49 +818,54 @@
     to { transform: rotate(360deg); }
   }
 
-  .timeframe-bar {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.75rem;
-    padding: 0.5rem 0.75rem;
-    background: var(--bg-secondary);
-    border: 1px solid var(--border);
-    border-radius: 6px;
+  .sidebar-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 0.75rem 0;
   }
 
-  .timeframe-bar label {
-    color: var(--text-secondary);
-    font-size: 0.85rem;
+  .sidebar-timeframe {
+    margin-bottom: 0.5rem;
   }
 
-  .timeframe-bar select {
+  .sidebar-label {
+    display: block;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.35rem;
+  }
+
+  .sidebar-timeframe select {
+    width: 100%;
+    padding: 0.4rem 0.5rem;
     background: var(--bg-primary);
     color: var(--text-primary);
     border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
     font-size: 0.85rem;
     cursor: pointer;
   }
 
-  .timeframe-bar select:focus {
+  .sidebar-timeframe select:focus {
     outline: none;
     border-color: var(--accent);
   }
 
-  .trade-toggle {
+  .sidebar-trade-toggle {
     display: flex;
     align-items: center;
-    gap: 0.3rem;
+    gap: 0.4rem;
     color: var(--text-secondary);
     font-size: 0.85rem;
     cursor: pointer;
-    margin-left: auto;
+    padding: 0.25rem 0;
   }
 
-  .trade-toggle input {
+  .sidebar-trade-toggle input {
     cursor: pointer;
+    accent-color: var(--accent);
   }
 
   .roster-badge {
@@ -860,6 +983,15 @@
     padding: 0.2rem 0.5rem;
     background: rgba(100, 116, 139, 0.2);
     border-radius: 4px;
+  }
+
+  .league-tag {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    padding: 0.15rem 0.4rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    margin: 0 0.5rem;
   }
 
   .trade-header {
@@ -1169,6 +1301,22 @@
     font-size: 0.9rem;
   }
 
+  .mobile-toolbar {
+    display: none;
+  }
+
+  .mobile-backdrop {
+    display: none;
+  }
+
+  .sidebar-header {
+    display: none;
+  }
+
+  .sidebar-close {
+    display: none;
+  }
+
   @media (max-width: 768px) {
     .main-content {
       flex-direction: column;
@@ -1176,18 +1324,141 @@
     }
 
     .sidebar {
-      display: none;
+      display: flex;
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      width: 300px;
+      max-width: 80vw;
+      z-index: 101;
+      transform: translateX(-100%);
+      transition: transform 0.25s ease;
+      height: 100vh;
+      max-height: 100vh;
     }
 
-    .mobile-league-selector {
+    .sidebar.open {
+      transform: translateX(0);
+    }
+
+    .sidebar-header {
+      display: flex;
+      justify-content: flex-end;
+      padding: 0.5rem 0.5rem 0 0;
+      position: absolute;
+      top: 0;
+      right: 0;
+      z-index: 1;
+    }
+
+    .sidebar-close {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 2rem;
+      height: 2rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .sidebar-close:hover {
+      background: rgba(51, 65, 85, 0.5);
+      color: var(--text-primary);
+    }
+
+    .mobile-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 100;
+    }
+
+    .mobile-backdrop.open {
       display: block;
-      width: 100%;
-      padding: 0.75rem;
+    }
+
+    .mobile-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+      padding: 0.5rem;
       background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
+
+    .mobile-filters-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.35rem 0.6rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .mobile-filters-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .mobile-filters-icon {
+      font-size: 1rem;
+    }
+
+    .mobile-filters-count {
+      font-size: 0.7rem;
+      color: var(--accent);
+      background: rgba(34, 211, 238, 0.15);
+      padding: 0.05rem 0.35rem;
+      border-radius: 8px;
+      margin-left: 0.15rem;
+    }
+
+    .mobile-toolbar-spacer {
+      flex: 1;
+    }
+
+    .mobile-toolbar-select {
+      flex: 0 1 auto;
+      min-width: 0;
+      max-width: 7rem;
+      padding: 0.3rem 0.4rem;
+      background: var(--bg-primary);
       color: var(--text-primary);
       border: 1px solid var(--border);
-      border-radius: 8px;
-      font-size: 1rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+    }
+
+    .mobile-toolbar-trades {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      color: var(--text-secondary);
+      font-size: 0.8rem;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .mobile-toolbar-trades input {
+      accent-color: var(--accent);
+      cursor: pointer;
     }
 
     .header-mobile-controls {
@@ -1199,17 +1470,6 @@
       width: 100%;
       visibility: visible;
       opacity: 1;
-    }
-
-    .mobile-league-selector-wrapper {
-      flex: 1;
-      max-width: 70%;
-      text-align: center;
-      display: block;
-    }
-
-    .mobile-league-selector-wrapper select {
-      width: 100%;
     }
 
     .auth-row-mobile {

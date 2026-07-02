@@ -46,104 +46,122 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
         if (!leagueId) {
           return json({ error: 'League ID required' }, { status: 400 });
         }
+        const leagueIds = leagueId.split(',').map(id => id.trim()).filter(Boolean);
         const currentYear = await getCurrentYear();
-        const transactions = await getTransactions(leagueId, cookie, days);
         const players = await loadPlayerCache(cookie);
-        const league = await getLeagueFull(leagueId, cookie);
-        const franchiseMap = league?.franchises || new Map<string, string>();
         const includeTrades = url.searchParams.get('includeTrades') === 'true';
-        const enriched = transactions.map(t => {
-          const franchiseName = getFranchiseName(franchiseMap, t.franchise);
-          
-          if (t.type === 'TRADE') {
-            const f1Gave = t.franchise1_gave_up?.split(',').filter(Boolean) || [];
-            const f2Gave = t.franchise2_gave_up?.split(',').filter(Boolean) || [];
+
+        const leagueResults = await Promise.all(leagueIds.map(async (lid) => {
+          try {
+            const [transactions, league] = await Promise.all([
+              getTransactions(lid, cookie, days),
+              getLeagueFull(lid, cookie)
+            ]);
+            return { leagueId: lid, leagueName: league?.name || lid, transactions, franchiseMap: league?.franchises || new Map<string, string>() };
+          } catch (e) {
+            console.error(`Failed to fetch data for league ${lid}:`, e);
+            return null;
+          }
+        }));
+
+        const allEnriched: MFLTransaction[] = [];
+        for (const result of leagueResults) {
+          if (!result) continue;
+          const { leagueId: lid, leagueName, transactions, franchiseMap } = result;
+          for (const t of transactions) {
+            const franchiseName = getFranchiseName(franchiseMap, t.franchise);
+            let enriched: MFLTransaction;
             
-            const f1Names = f1Gave.map(id => {
-              const cleanId = id.trim();
-              if (cleanId.startsWith('FP_') || cleanId.startsWith('DP_')) {
-                return { id: cleanId, name: formatDraftPick(cleanId, currentYear), position: 'PICK' };
+            if (t.type === 'TRADE') {
+              const f1Gave = t.franchise1_gave_up?.split(',').filter(Boolean) || [];
+              const f2Gave = t.franchise2_gave_up?.split(',').filter(Boolean) || [];
+              
+              const f1Names = f1Gave.map(id => {
+                const cleanId = id.trim();
+                if (cleanId.startsWith('FP_') || cleanId.startsWith('DP_')) {
+                  return { id: cleanId, name: formatDraftPick(cleanId, currentYear), position: 'PICK' };
+                }
+                const rosterPct = players.get(cleanId)?.rosterPct;
+                return { id: cleanId, name: getPlayerName(players, cleanId), position: getPlayerPosition(players, cleanId)?.toUpperCase(), rosterPct };
+              });
+              const f2Names = f2Gave.map(id => {
+                const cleanId = id.trim();
+                if (cleanId.startsWith('FP_') || cleanId.startsWith('DP_')) {
+                  return { id: cleanId, name: formatDraftPick(cleanId, currentYear), position: 'PICK' };
+                }
+                const rosterPct = players.get(cleanId)?.rosterPct;
+                return { id: cleanId, name: getPlayerName(players, cleanId), position: getPlayerPosition(players, cleanId)?.toUpperCase(), rosterPct };
+              });
+
+              const formattedTime = t.timestamp ? formatTimestamp(t.timestamp) : '';
+              const allPlayers = [...f1Names, ...f2Names];
+              const maxRosterPct = Math.max(...allPlayers.map(p => p.rosterPct ?? 0), 0);
+
+              enriched = {
+                ...t,
+                type: getTransactionDisplayName(t.type),
+                playerNames: [...f1Names.map(p => p.name), ...f2Names.map(p => p.name)],
+                playerName: [...f1Names.map(p => p.name), ...f2Names.map(p => p.name)].join(', '),
+                franchiseName,
+                tradePartnerName: t.franchise2 ? getFranchiseName(franchiseMap, t.franchise2) : undefined,
+                tradeGives: f1Names,
+                tradeReceives: f2Names,
+                formattedTime,
+                maxRosterPct,
+                leagueId: lid,
+                leagueName
+              };
+            } else {
+              let bid: string | undefined;
+              let added: string[];
+              let dropped: string[];
+              if (t.type === 'BBID_WAIVER' && t.transaction) {
+                const parsed = parseBBIDWaiverTransaction(t.transaction);
+                added = parsed.added;
+                dropped = parsed.dropped;
+                bid = parsed.bid;
+              } else if (t.transaction) {
+                const parsed = parseFreeAgentTransaction(t.transaction);
+                added = parsed.added;
+                dropped = parsed.dropped;
+                bid = t.bid;
+              } else {
+                added = [];
+                dropped = [];
+                bid = t.bid;
               }
-              const rosterPct = players.get(cleanId)?.rosterPct;
-              return { id: cleanId, name: getPlayerName(players, cleanId), position: getPlayerPosition(players, cleanId)?.toUpperCase(), rosterPct };
-            });
-            const f2Names = f2Gave.map(id => {
-              const cleanId = id.trim();
-              if (cleanId.startsWith('FP_') || cleanId.startsWith('DP_')) {
-                return { id: cleanId, name: formatDraftPick(cleanId, currentYear), position: 'PICK' };
-              }
-              const rosterPct = players.get(cleanId)?.rosterPct;
-              return { id: cleanId, name: getPlayerName(players, cleanId), position: getPlayerPosition(players, cleanId)?.toUpperCase(), rosterPct };
-            });
-
-            const tradePartnerId = t.franchise === t.franchise ? t.franchise2 : t.franchise;
-            const tradePartnerName = getFranchiseName(franchiseMap, tradePartnerId || t.franchise2 || '');
-            const formattedTime = t.timestamp ? formatTimestamp(t.timestamp) : '';
-
-            const allPlayers = [...f1Names, ...f2Names];
-            const maxRosterPct = Math.max(...allPlayers.map(p => p.rosterPct ?? 0), 0);
-
-            return {
-              ...t,
-              type: getTransactionDisplayName(t.type),
-              playerNames: [...f1Names.map(p => p.name), ...f2Names.map(p => p.name)],
-              playerName: [...f1Names.map(p => p.name), ...f2Names.map(p => p.name)].join(', '),
-              franchiseName,
-              tradePartnerName: t.franchise2 ? getFranchiseName(franchiseMap, t.franchise2) : undefined,
-              tradeGives: f1Names,
-              tradeReceives: f2Names,
-              formattedTime,
-              maxRosterPct
-            };
+              
+              const addedPlayers = added.map(id => {
+                const rosterPct = players.get(id)?.rosterPct;
+                return { id, name: getPlayerName(players, id), position: getPlayerPosition(players, id)?.toUpperCase(), rosterPct };
+              });
+              const droppedPlayers = dropped.map(id => {
+                const rosterPct = players.get(id)?.rosterPct;
+                return { id, name: getPlayerName(players, id), position: getPlayerPosition(players, id)?.toUpperCase(), rosterPct };
+              });
+              
+              const formattedTime = t.timestamp ? formatTimestamp(t.timestamp) : '';
+              const maxRosterPct = Math.max(...droppedPlayers.map(p => p.rosterPct ?? 0), 0);
+              enriched = {
+                ...t,
+                type: getTransactionDisplayName(t.type),
+                addedPlayers,
+                droppedPlayers,
+                playerNames: [...addedPlayers.map(p => p.name), ...droppedPlayers.map(p => p.name)],
+                playerName: [...addedPlayers.map(p => p.name), ...droppedPlayers.map(p => p.name)].join(', ') || undefined,
+                franchiseName,
+                formattedTime,
+                bid,
+                maxRosterPct,
+                leagueId: lid,
+                leagueName
+              };
+            }
+            allEnriched.push(enriched);
           }
-          
-          // BBID_WAIVER: add_player|price|drop_player
-          // FREE_AGENT/WAIVER: added_players|dropped_players
-          let bid: string | undefined;
-          let added: string[];
-          let dropped: string[];
-          if (t.type === 'BBID_WAIVER' && t.transaction) {
-            const parsed = parseBBIDWaiverTransaction(t.transaction);
-            added = parsed.added;
-            dropped = parsed.dropped;
-            bid = parsed.bid;
-          } else if (t.transaction) {
-            const parsed = parseFreeAgentTransaction(t.transaction);
-            added = parsed.added;
-            dropped = parsed.dropped;
-            bid = t.bid;
-          } else {
-            added = [];
-            dropped = [];
-            bid = t.bid;
-          }
-          
-          const addedPlayers = added.map(id => {
-            const rosterPct = players.get(id)?.rosterPct;
-            return { id, name: getPlayerName(players, id), position: getPlayerPosition(players, id)?.toUpperCase(), rosterPct };
-          });
-          const droppedPlayers = dropped.map(id => {
-            const rosterPct = players.get(id)?.rosterPct;
-            return { id, name: getPlayerName(players, id), position: getPlayerPosition(players, id)?.toUpperCase(), rosterPct };
-          });
-          
-          const formattedTime = t.timestamp ? formatTimestamp(t.timestamp) : '';
-          const allPlayers = [...addedPlayers, ...droppedPlayers];
-          const maxRosterPct = Math.max(...droppedPlayers.map(p => p.rosterPct ?? 0), 0);
-          return {
-            ...t,
-            type: getTransactionDisplayName(t.type),
-            addedPlayers,
-            droppedPlayers,
-            playerNames: [...addedPlayers.map(p => p.name), ...droppedPlayers.map(p => p.name)],
-            playerName: [...addedPlayers.map(p => p.name), ...droppedPlayers.map(p => p.name)].join(', ') || undefined,
-            franchiseName,
-            formattedTime,
-            bid,
-            maxRosterPct
-          };
-        });
-        let filtered = includeTrades ? enriched : enriched.filter(t => t.type !== 'Trade');
+        }
+
+        let filtered = includeTrades ? allEnriched : allEnriched.filter(t => t.type !== 'Trade');
         filtered.sort((a, b) => {
           const pctDiff = (b.maxRosterPct || 0) - (a.maxRosterPct || 0);
           if (pctDiff !== 0) return pctDiff;
