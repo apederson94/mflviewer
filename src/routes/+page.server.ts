@@ -1,15 +1,16 @@
 import type { PageServerLoad } from './$types';
-import { getMyLeagues, getCurrentWeek, loadPlayerCache, MFL_COOKIE_NAME } from '$lib/api';
+import { getMyLeagues, getCurrentWeek, getCurrentYear, loadPlayerCache, MFL_COOKIE_NAME } from '$lib/api';
 
 export const load: PageServerLoad = async ({ cookies }) => {
   const cookie = cookies.get(MFL_COOKIE_NAME);
-  const week = await getCurrentWeek();
+  const [week, year] = await Promise.all([getCurrentWeek(), getCurrentYear()]);
   
   if (!cookie) {
     return {
       loggedIn: false,
       leagues: [],
       week,
+      year,
       players: []
     };
   }
@@ -23,6 +24,7 @@ export const load: PageServerLoad = async ({ cookies }) => {
       loggedIn: true,
       leagues,
       week,
+      year,
       players: Array.from(players.entries())
     };
   } catch (error) {
@@ -32,6 +34,7 @@ export const load: PageServerLoad = async ({ cookies }) => {
       leagues: [],
       error: 'Failed to load data',
       week,
+      year,
       players: []
     };
   }

@@ -16,6 +16,7 @@
   let formLoading = $state(false);
 
   let isLoggedIn = $derived(data.loggedIn);
+  let year = $state(data.year);
   let selectedDays = $state('1');
   let showTrades = $state(false);
   let mobileFilterOpen = $state(false);
@@ -321,7 +322,14 @@
               <div class="transaction-card" data-type={transaction.type}>
                 <div class="transaction-header">
                   <span class="transaction-type">{transaction.type}</span>
-                  <span class="league-tag">{transaction.leagueName}</span>
+                  <a
+                    href={`https://www.myfantasyleague.com/${year}/home/${transaction.leagueId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="league-tag-link"
+                  >
+                    <span class="league-tag">{transaction.leagueName}</span>
+                  </a>
                 </div>
                 {#if transaction.type === 'Trade' && transaction.tradeGives && transaction.tradeReceives}
                   <div class="trade-header">
@@ -985,6 +993,16 @@
     border: 1px solid var(--border);
     border-radius: 4px;
     margin: 0 0.5rem;
+  }
+
+  .league-tag-link {
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .league-tag-link:hover .league-tag {
+    border-color: var(--accent);
+    color: var(--accent);
   }
 
   .trade-header {
