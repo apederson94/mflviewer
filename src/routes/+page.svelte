@@ -16,7 +16,7 @@
   let formLoading = $state(false);
 
   let isLoggedIn = $derived(data.loggedIn);
-  let selectedDays = $state('7');
+  let selectedDays = $state('1');
   let showTrades = $state(false);
   let mobileFilterOpen = $state(false);
   let leagueSearch = $state('');
@@ -256,6 +256,7 @@
           <div class="sidebar-timeframe">
             <label for="days-select-sidebar" class="sidebar-label">Timeframe</label>
             <select id="days-select-sidebar" bind:value={selectedDays} onchange={() => loadTransactions(Array.from(selectedLeagueIds))}>
+              <option value="1">1 day</option>
               <option value="7">7 days</option>
               <option value="14">14 days</option>
               <option value="30">30 days</option>
@@ -300,6 +301,7 @@
           </button>
           <div class="mobile-toolbar-spacer"></div>
           <select class="mobile-toolbar-select" bind:value={selectedDays} onchange={() => loadTransactions(Array.from(selectedLeagueIds))}>
+            <option value="1">1 day</option>
             <option value="7">7 days</option>
             <option value="14">14 days</option>
             <option value="30">30 days</option>
