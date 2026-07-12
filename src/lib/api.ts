@@ -4,6 +4,8 @@ import type {
   MFLMyLeaguesResponse,
   MFLPlayersResponse,
   MFLTopOwnsResponse,
+  MFLPendingWaiversResponse,
+  MFLPendingWaiverRequest,
   StoredLeague,
   MFLFranchise,
   MFLLeagueResponse,
@@ -361,6 +363,23 @@ export async function getTransactions(
     return merged;
   } catch (error) {
     console.error(`Fetch transactions for league ${leagueId} failed: ${error}`);
+    throw error;
+  }
+}
+
+export async function getPendingWaivers(
+  leagueId: string,
+  cookie?: string
+): Promise<MFLPendingWaiverRequest[]> {
+  const baseUrl = await getBaseUrl();
+  const url = `${baseUrl}?TYPE=pendingWaivers&L=${leagueId}&JSON=1`;
+
+  try {
+    const response = await fetchJSON<MFLPendingWaiversResponse>(url, cookie);
+    const requests = response.pendingWaivers?.blindBidWaiverRequest;
+    return requests ? toArray(requests) : [];
+  } catch (error) {
+    console.error(`Fetch pending waivers for league ${leagueId} failed: ${error}`);
     throw error;
   }
 }

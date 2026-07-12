@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import type { PageData } from './$types';
-  import type { StoredLeague, MFLTransaction } from '$lib';
+  import type { StoredLeague, MFLTransaction, MFLPendingWaiver } from '$lib';
 
   let { data }: { data: PageData } = $props();
 
@@ -21,6 +21,11 @@
   let showTrades = $state(false);
   let mobileFilterOpen = $state(false);
   let leagueSearch = $state('');
+  let activeTab = $state<'transactions' | 'waivers'>('transactions');
+  let pendingWaivers = $state<MFLPendingWaiver[]>([]);
+  let waiverLoading = $state(false);
+  let loadId = 0;
+  let waiverLoadId = 0;
 
   let filteredLeagues = $derived(
     leagueSearch
@@ -46,20 +51,48 @@
       transactions = [];
       return;
     }
+    const thisLoad = ++loadId;
     loading = true;
     error = null;
     try {
       const res = await fetch(`/api/mfl?type=transactions&league=${leagueIds.join(',')}&days=${selectedDays}&includeTrades=${showTrades}`);
+      if (thisLoad !== loadId) return;
       const data = await res.json();
       if (data.error) {
         throw new Error(data.error);
       }
       transactions = data.transactions || [];
     } catch (err) {
+      if (thisLoad !== loadId) return;
       error = err instanceof Error ? err.message : 'Failed to load transactions';
       transactions = [];
     } finally {
-      loading = false;
+      if (thisLoad === loadId) loading = false;
+    }
+  }
+
+  async function loadPendingWaivers(leagueIds: string[]) {
+    if (leagueIds.length === 0) {
+      pendingWaivers = [];
+      return;
+    }
+    const thisLoad = ++waiverLoadId;
+    waiverLoading = true;
+    error = null;
+    try {
+      const res = await fetch(`/api/mfl?type=pendingWaivers&league=${leagueIds.join(',')}`);
+      if (thisLoad !== waiverLoadId) return;
+      const data = await res.json();
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      pendingWaivers = data.pendingWaivers || [];
+    } catch (err) {
+      if (thisLoad !== waiverLoadId) return;
+      error = err instanceof Error ? err.message : 'Failed to load pending waivers';
+      pendingWaivers = [];
+    } finally {
+      if (thisLoad === waiverLoadId) waiverLoading = false;
     }
   }
 
@@ -126,26 +159,46 @@
       next.add(leagueId);
     }
     selectedLeagueIds = next;
-    loadTransactions(Array.from(next));
+    const ids = Array.from(next);
+    if (activeTab === 'transactions') {
+      loadTransactions(ids);
+    } else {
+      loadPendingWaivers(ids);
+    }
   }
 
   function handleSelectAll() {
     const next = new Set(selectedLeagueIds);
     for (const l of filteredLeagues) next.add(l.id);
     selectedLeagueIds = next;
-    loadTransactions(Array.from(next));
+    const ids = Array.from(next);
+    if (activeTab === 'transactions') {
+      loadTransactions(ids);
+    } else {
+      loadPendingWaivers(ids);
+    }
   }
 
   function handleSelectNone() {
     const next = new Set(selectedLeagueIds);
     for (const l of filteredLeagues) next.delete(l.id);
     selectedLeagueIds = next;
-    loadTransactions(Array.from(next));
+    const ids = Array.from(next);
+    if (activeTab === 'transactions') {
+      loadTransactions(ids);
+    } else {
+      loadPendingWaivers(ids);
+    }
   }
 
   onMount(() => {
     if (isLoggedIn && selectedLeagueIds.size > 0) {
-      loadTransactions(Array.from(selectedLeagueIds));
+      const ids = Array.from(selectedLeagueIds);
+      if (activeTab === 'transactions') {
+        loadTransactions(ids);
+      } else {
+        loadPendingWaivers(ids);
+      }
     }
   });
 
@@ -254,20 +307,22 @@
             <p class="no-data">No leagues match your search</p>
           {/if}
           <div class="sidebar-divider"></div>
-          <div class="sidebar-timeframe">
-            <label for="days-select-sidebar" class="sidebar-label">Timeframe</label>
-            <select id="days-select-sidebar" bind:value={selectedDays} onchange={() => loadTransactions(Array.from(selectedLeagueIds))}>
-              <option value="1">1 day</option>
-              <option value="7">7 days</option>
-              <option value="14">14 days</option>
-              <option value="30">30 days</option>
-              <option value="all">All (current year)</option>
-            </select>
-          </div>
-          <label class="sidebar-trade-toggle">
-            <input type="checkbox" bind:checked={showTrades} onchange={() => loadTransactions(Array.from(selectedLeagueIds))} />
-            Show Trades
-          </label>
+          {#if activeTab === 'transactions'}
+            <div class="sidebar-timeframe">
+              <label for="days-select-sidebar" class="sidebar-label">Timeframe</label>
+              <select id="days-select-sidebar" bind:value={selectedDays} onchange={() => loadTransactions(Array.from(selectedLeagueIds))}>
+                <option value="1">1 day</option>
+                <option value="7">7 days</option>
+                <option value="14">14 days</option>
+                <option value="30">30 days</option>
+                <option value="all">All (current year)</option>
+              </select>
+            </div>
+            <label class="sidebar-trade-toggle">
+              <input type="checkbox" bind:checked={showTrades} onchange={() => loadTransactions(Array.from(selectedLeagueIds))} />
+              Show Trades
+            </label>
+          {/if}
         {/if}
         
         {#if leagues.length === 0 && isLoggedIn && !data.error}
@@ -292,152 +347,272 @@
       {/if}
       
       {#if selectedLeagueIds.size > 0}
-        <div class="mobile-toolbar">
-          <button class="mobile-filters-btn" onclick={toggleMobileFilter}>
-            <span class="mobile-filters-icon">☰</span>
-            <span class="mobile-filters-label">Filters</span>
-            {#if selectedLeagueIds.size !== leagues.length}
-              <span class="mobile-filters-count">{selectedLeagueIds.size}/{leagues.length}</span>
+        <div class="tab-navigation">
+          <button
+            class="tab-button"
+            class:active={activeTab === 'transactions'}
+            onclick={() => { activeTab = 'transactions'; error = null; loadTransactions(Array.from(selectedLeagueIds)); }}
+          >
+            Transactions
+          </button>
+          <button
+            class="tab-button"
+            class:active={activeTab === 'waivers'}
+            onclick={() => { activeTab = 'waivers'; error = null; loadPendingWaivers(Array.from(selectedLeagueIds)); }}
+          >
+            Pending Waivers
+            {#if pendingWaivers.length > 0}
+              <span class="tab-count">{pendingWaivers.length}</span>
             {/if}
           </button>
-          <div class="mobile-toolbar-spacer"></div>
-          <select class="mobile-toolbar-select" bind:value={selectedDays} onchange={() => loadTransactions(Array.from(selectedLeagueIds))}>
-            <option value="1">1 day</option>
-            <option value="7">7 days</option>
-            <option value="14">14 days</option>
-            <option value="30">30 days</option>
-            <option value="all">All</option>
-          </select>
-          <label class="mobile-toolbar-trades">
-            <input type="checkbox" bind:checked={showTrades} onchange={() => loadTransactions(Array.from(selectedLeagueIds))} />
-            Trades
-          </label>
+          {#if activeTab === 'waivers' && !waiverLoading && pendingWaivers.length > 0}
+            <button
+              class="tab-refresh-btn"
+              onclick={() => loadPendingWaivers(Array.from(selectedLeagueIds))}
+            >
+              Refresh
+            </button>
+          {/if}
         </div>
-        {#if loading}
-          <div class="loading">Loading transactions...</div>
-        {:else if transactions.length > 0}
-          <div class="transactions-wrapper">
-            <div class="transactions-list">
-            {#each transactions as transaction, i (`${transaction.id ?? i}-${transaction.week ?? i}-${transaction.type ?? i}`)}
-              <div class="transaction-card" data-type={transaction.type}>
-                <div class="transaction-header">
-                  <span class="transaction-type">{transaction.type}</span>
-                  <a
-                    href={`https://www.myfantasyleague.com/${year}/home/${transaction.leagueId}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="league-tag-link"
-                  >
-                    <span class="league-tag">{transaction.leagueName}</span>
-                  </a>
+
+        {#if activeTab === 'transactions'}
+          <div class="mobile-toolbar">
+            <button class="mobile-filters-btn" onclick={toggleMobileFilter}>
+              <span class="mobile-filters-icon">☰</span>
+              <span class="mobile-filters-label">Filters</span>
+              {#if selectedLeagueIds.size !== leagues.length}
+                <span class="mobile-filters-count">{selectedLeagueIds.size}/{leagues.length}</span>
+              {/if}
+            </button>
+            <div class="mobile-toolbar-spacer"></div>
+            <select class="mobile-toolbar-select" bind:value={selectedDays} onchange={() => loadTransactions(Array.from(selectedLeagueIds))}>
+              <option value="1">1 day</option>
+              <option value="7">7 days</option>
+              <option value="14">14 days</option>
+              <option value="30">30 days</option>
+              <option value="all">All</option>
+            </select>
+            <label class="mobile-toolbar-trades">
+              <input type="checkbox" bind:checked={showTrades} onchange={() => loadTransactions(Array.from(selectedLeagueIds))} />
+              Trades
+            </label>
+          </div>
+          {#if loading}
+            <div class="loading">Loading transactions...</div>
+          {:else if transactions.length > 0}
+            <div class="transactions-wrapper">
+              <div class="transactions-list">
+              {#each transactions as transaction, i (`${transaction.id ?? i}-${transaction.week ?? i}-${transaction.type ?? i}`)}
+                <div class="transaction-card" data-type={transaction.type}>
+                  <div class="transaction-header">
+                    <span class="transaction-type">{transaction.type}</span>
+                    <a
+                      href={`https://www.myfantasyleague.com/${year}/home/${transaction.leagueId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="league-tag-link"
+                    >
+                      <span class="league-tag">{transaction.leagueName}</span>
+                    </a>
+                  </div>
+                  {#if transaction.type === 'Trade' && transaction.tradeGives && transaction.tradeReceives}
+                    <div class="trade-header">
+                      <span class="trade-col">{transaction.franchiseName}</span>
+                      <span class="trade-col">{transaction.tradePartnerName}</span>
+                    </div>
+                    <div class="trade-sides">
+                      <div class="trade-side">
+                        <div class="trade-separator"></div>
+                        <div class="trade-side-content">
+                          {#if transaction.tradeReceives?.length}
+                            <div class="player-list">
+                              {#each transaction.tradeReceives as player}
+                                <div class="player-item">
+                                  {#if player.position}
+                                    <span class="position-badge" data-position={player.position}>{player.position}</span>
+                                  {/if}
+                                  <span class="player-name">{player.name}</span>
+                                  {#if player.rosterPct != null}<span class="roster-badge">{player.rosterPct.toFixed(1)}%</span>{/if}
+                                </div>
+                              {/each}
+                            </div>
+                          {:else}
+                            None
+                          {/if}
+                        </div>
+                      </div>
+                      <div class="trade-side">
+                        <div class="trade-separator"></div>
+                        <div class="trade-side-content">
+                          {#if transaction.tradeGives?.length}
+                            <div class="player-list">
+                              {#each transaction.tradeGives as player}
+                                <div class="player-item">
+                                  {#if player.position}
+                                    <span class="position-badge" data-position={player.position}>{player.position}</span>
+                                  {/if}
+                                  <span class="player-name">{player.name}</span>
+                                  {#if player.rosterPct != null}<span class="roster-badge">{player.rosterPct.toFixed(1)}%</span>{/if}
+                                </div>
+                              {/each}
+                            </div>
+                          {:else}
+                            None
+                          {/if}
+                        </div>
+                      </div>
+                    </div>
+                  {:else}
+                    <div class="fa-header">
+                      <div class="franchise-item">
+                        <span class="franchise-label">Franchise</span>
+                        <span class="franchise-name">{transaction.franchiseName}</span>
+                      </div>
+                    </div>
+                    <div class="fa-sides">
+                      <div class="fa-side">
+                        <span class="fa-side-header">Added</span>
+                        <span class="fa-side-content">
+                          {#if transaction.addedPlayers?.length}
+                            <div class="player-list">
+                              {#each transaction.addedPlayers as player}
+                                <span class="player-item">
+                                  {#if player.position}
+                                    <span class="position-badge" data-position={player.position}>{player.position}</span>
+                                  {/if}
+                                  <span class="player-name">{player.name}</span>
+                                  {#if player.rosterPct != null}<span class="roster-badge">{player.rosterPct.toFixed(1)}%</span>{/if}
+                                </span>
+                              {/each}
+                            </div>
+                          {:else}
+                            None
+                          {/if}
+                        </span>
+                      </div>
+                      <div class="fa-side">
+                        <span class="fa-side-header">Dropped</span>
+                        <span class="fa-side-content">
+                          {#if transaction.droppedPlayers?.length}
+                            <div class="player-list">
+                              {#each transaction.droppedPlayers as player}
+                                <span class="player-item">
+                                  {#if player.position}
+                                    <span class="position-badge" data-position={player.position}>{player.position}</span>
+                                  {/if}
+                                  <span class="player-name">{player.name}</span>
+                                  {#if player.rosterPct != null}<span class="roster-badge">{player.rosterPct.toFixed(1)}%</span>{/if}
+                                </span>
+                              {/each}
+                            </div>
+                          {:else}
+                            None
+                          {/if}
+                        </span>
+                      </div>
+                    </div>
+                    {#if transaction.bid}<span class="tx-bid">Bid: ${transaction.bid}</span>{/if}
+                  {/if}
+                  <div class="tx-timestamp">{transaction.formattedTime}</div>
                 </div>
-                {#if transaction.type === 'Trade' && transaction.tradeGives && transaction.tradeReceives}
-                  <div class="trade-header">
-                    <span class="trade-col">{transaction.franchiseName}</span>
-                    <span class="trade-col">{transaction.tradePartnerName}</span>
-                  </div>
-                  <div class="trade-sides">
-                    <div class="trade-side">
-                      <div class="trade-separator"></div>
-                      <div class="trade-side-content">
-                        {#if transaction.tradeReceives?.length}
-                          <div class="player-list">
-                            {#each transaction.tradeReceives as player}
-                              <div class="player-item">
-                                {#if player.position}
-                                  <span class="position-badge" data-position={player.position}>{player.position}</span>
-                                {/if}
-                                <span class="player-name">{player.name}</span>
-                                {#if player.rosterPct != null}<span class="roster-badge">{player.rosterPct.toFixed(1)}%</span>{/if}
-                              </div>
-                            {/each}
-                          </div>
-                        {:else}
-                          None
-                        {/if}
-                      </div>
-                    </div>
-                    <div class="trade-side">
-                      <div class="trade-separator"></div>
-                      <div class="trade-side-content">
-                        {#if transaction.tradeGives?.length}
-                          <div class="player-list">
-                            {#each transaction.tradeGives as player}
-                              <div class="player-item">
-                                {#if player.position}
-                                  <span class="position-badge" data-position={player.position}>{player.position}</span>
-                                {/if}
-                                <span class="player-name">{player.name}</span>
-                                {#if player.rosterPct != null}<span class="roster-badge">{player.rosterPct.toFixed(1)}%</span>{/if}
-                              </div>
-                            {/each}
-                          </div>
-                        {:else}
-                          None
-                        {/if}
-                      </div>
-                    </div>
-                  </div>
-                {:else}
-                  <div class="fa-header">
-                    <div class="franchise-item">
-                      <span class="franchise-label">Franchise</span>
-                      <span class="franchise-name">{transaction.franchiseName}</span>
-                    </div>
-                  </div>
-                  <div class="fa-sides">
-                    <div class="fa-side">
-                      <span class="fa-side-header">Added</span>
-                      <span class="fa-side-content">
-                        {#if transaction.addedPlayers?.length}
-                          <div class="player-list">
-                            {#each transaction.addedPlayers as player}
-                              <span class="player-item">
-                                {#if player.position}
-                                  <span class="position-badge" data-position={player.position}>{player.position}</span>
-                                {/if}
-                                <span class="player-name">{player.name}</span>
-                                {#if player.rosterPct != null}<span class="roster-badge">{player.rosterPct.toFixed(1)}%</span>{/if}
-                              </span>
-                            {/each}
-                          </div>
-                        {:else}
-                          None
-                        {/if}
-                      </span>
-                    </div>
-                    <div class="fa-side">
-                      <span class="fa-side-header">Dropped</span>
-                      <span class="fa-side-content">
-                        {#if transaction.droppedPlayers?.length}
-                          <div class="player-list">
-                            {#each transaction.droppedPlayers as player}
-                              <span class="player-item">
-                                {#if player.position}
-                                  <span class="position-badge" data-position={player.position}>{player.position}</span>
-                                {/if}
-                                <span class="player-name">{player.name}</span>
-                                {#if player.rosterPct != null}<span class="roster-badge">{player.rosterPct.toFixed(1)}%</span>{/if}
-                              </span>
-                            {/each}
-                          </div>
-                        {:else}
-                          None
-                        {/if}
-                      </span>
-                    </div>
-                  </div>
-                  {#if transaction.bid}<span class="tx-bid">Bid: ${transaction.bid}</span>{/if}
-                {/if}
-                <div class="tx-timestamp">{transaction.formattedTime}</div>
+              {/each}
               </div>
-            {/each}
             </div>
-          </div>
-        {:else}
-          <div class="no-data">
-            No transactions found — try expanding the timeframe or selecting more leagues
-          </div>
+          {:else}
+            <div class="no-data">
+              No transactions found — try expanding the timeframe or selecting more leagues
+            </div>
+          {/if}
+
+        {:else if activeTab === 'waivers'}
+          {#if waiverLoading}
+            <div class="loading">Loading pending waivers...</div>
+          {:else if pendingWaivers.length > 0}
+            <div class="waivers-list">
+              {#each pendingWaivers as waiver, i (`${waiver.leagueId}-${i}`)}
+                <div class="waiver-card">
+                  <div class="waiver-header">
+                    <span class="waiver-type">Pending Waiver</span>
+                    <a
+                      href={`https://www.myfantasyleague.com/${year}/home/${waiver.leagueId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="league-tag-link"
+                    >
+                      <span class="league-tag">{waiver.leagueName}</span>
+                    </a>
+                  </div>
+
+                  <div class="waiver-details">
+                    <div class="waiver-franchise">
+                      <span class="franchise-label">Franchise</span>
+                      <span class="franchise-name">{waiver.franchiseName}</span>
+                    </div>
+
+                    <div class="waiver-priorities">
+                      {#each waiver.claims as claim, ci}
+                        {#if ci > 0}
+                          <div class="waiver-priority-separator"></div>
+                        {/if}
+                        <div class="waiver-priority">
+                          <span class="priority-badge">#{ci + 1}</span>
+                          <div class="priority-body">
+                            <div class="priority-row">
+                              <span class="priority-label">Add</span>
+                              {#if claim.addedPlayer}
+                                <div class="player-item">
+                                  {#if claim.addedPlayer.position}
+                                    <span class="position-badge" data-position={claim.addedPlayer.position}>{claim.addedPlayer.position}</span>
+                                  {/if}
+                                  <span class="player-name">{claim.addedPlayer.name}</span>
+                                  {#if claim.addedPlayer.rosterPct != null}
+                                    <span class="roster-badge">{claim.addedPlayer.rosterPct.toFixed(1)}%</span>
+                                  {/if}
+                                </div>
+                              {/if}
+                              <span class="priority-bid">${claim.bid}</span>
+                            </div>
+                            <div class="priority-row">
+                              <span class="priority-label">Drop</span>
+                              {#if claim.droppedPlayer}
+                                <div class="player-item">
+                                  {#if claim.droppedPlayer.position}
+                                    <span class="position-badge" data-position={claim.droppedPlayer.position}>{claim.droppedPlayer.position}</span>
+                                  {/if}
+                                  <span class="player-name">{claim.droppedPlayer.name}</span>
+                                  {#if claim.droppedPlayer.rosterPct != null}
+                                    <span class="roster-badge">{claim.droppedPlayer.rosterPct.toFixed(1)}%</span>
+                                  {/if}
+                                </div>
+                              {:else}
+                                <span class="no-drop">None</span>
+                              {/if}
+                            </div>
+                          </div>
+                        </div>
+                      {/each}
+                    </div>
+
+                    <div class="waiver-meta">
+                      <span class="waiver-round">Round {waiver.round}</span>
+                      <span class="waiver-time">{waiver.formattedTime}</span>
+                    </div>
+
+                    {#if waiver.commentsFormatted}
+                      <div class="waiver-comments">
+                        <span class="comments-label">Comments</span>
+                        <span class="comments-text">{waiver.commentsFormatted}</span>
+                      </div>
+                    {/if}
+                  </div>
+                </div>
+              {/each}
+            </div>
+          {:else}
+            <div class="no-data">
+              No pending waivers found — try selecting more leagues
+            </div>
+          {/if}
         {/if}
       {:else}
         <div class="no-data">
@@ -1522,5 +1697,245 @@
       height: 3px;
       border-radius: 12px 12px 0 0;
     }
+  }
+
+  .tab-navigation {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.35rem;
+  }
+
+  .tab-button {
+    padding: 0.6rem 1rem;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 6px 6px 0 0;
+    transition: all 0.2s ease;
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .tab-button:hover {
+    color: var(--text-primary);
+    background: rgba(51, 65, 85, 0.3);
+  }
+
+  .tab-button.active {
+    color: var(--accent);
+    background: rgba(34, 211, 238, 0.1);
+  }
+
+  .tab-button.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--accent);
+    border-radius: 2px 2px 0 0;
+  }
+
+  .tab-count {
+    font-size: 0.7rem;
+    background: var(--waiver-color);
+    color: var(--bg-primary);
+    padding: 0.1rem 0.4rem;
+    border-radius: 10px;
+    font-weight: 700;
+  }
+
+  .tab-refresh-btn {
+    margin-left: auto;
+    padding: 0.3rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .tab-refresh-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .waivers-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .waiver-card {
+    background: linear-gradient(135deg, var(--bg-secondary) 0%, #1a2536 100%);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.75rem;
+    box-shadow: var(--card-shadow);
+    transition: all 0.2s ease;
+    position: relative;
+    animation: fadeInUp 0.3s ease;
+  }
+
+  .waiver-card::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--waiver-color);
+    border-radius: 8px 0 0 8px;
+  }
+
+  .waiver-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--card-shadow-hover);
+    border-color: var(--text-muted);
+  }
+
+  .waiver-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.25rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .waiver-type {
+    font-weight: 700;
+    font-size: 0.75rem;
+    padding: 0.15rem 0.4rem;
+    border-radius: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--waiver-color);
+    background: rgba(251, 146, 60, 0.15);
+    box-shadow: 0 0 12px rgba(251, 146, 60, 0.3);
+    border: 1px solid rgba(251, 146, 60, 0.3);
+  }
+
+  .waiver-details {
+    padding: 0.25rem 0;
+  }
+
+  .waiver-franchise {
+    margin-bottom: 0.5rem;
+  }
+
+  .waiver-priorities {
+    margin-bottom: 0.5rem;
+  }
+
+  .waiver-priority-separator {
+    height: 1px;
+    background: var(--border);
+    margin: 0.5rem 0;
+  }
+
+  .waiver-priority {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .priority-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 0.15rem 0.4rem;
+    border-radius: 3px;
+    background: rgba(251, 146, 60, 0.15);
+    color: var(--waiver-color);
+    flex-shrink: 0;
+    margin-top: 0.15rem;
+  }
+
+  .priority-body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .priority-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0;
+  }
+
+  .priority-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    width: 3rem;
+    flex-shrink: 0;
+  }
+
+  .priority-row .player-item {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .priority-bid {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--waiver-color);
+    flex-shrink: 0;
+  }
+
+  .no-drop {
+    color: var(--text-muted);
+    font-style: italic;
+    font-size: 0.85rem;
+  }
+
+  .waiver-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+  }
+
+  .waiver-round {
+    background: rgba(100, 116, 139, 0.2);
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+  }
+
+  .waiver-comments {
+    padding: 0.5rem;
+    background: rgba(15, 23, 42, 0.6);
+    border-radius: 6px;
+    border: 1px solid rgba(51, 65, 85, 0.5);
+    text-align: left;
+  }
+
+  .comments-label {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    margin-bottom: 0.25rem;
+  }
+
+  .comments-text {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    white-space: pre-wrap;
   }
 </style>

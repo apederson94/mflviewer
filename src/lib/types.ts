@@ -120,3 +120,38 @@ export interface MFLLoginResponse {
   success: boolean;
   cookie: string;
 }
+
+export interface MFLPendingWaiverRequest {
+  comments: string;
+  timestamp: string;
+  round: string;
+  addsDrops: string;
+}
+
+export interface MFLPendingWaiversResponse {
+  pendingWaivers: {
+    blindBidWaiverRequest: MFLPendingWaiverRequest | MFLPendingWaiverRequest[];
+  };
+}
+
+export interface ParsedWaiverClaim {
+  playerId: string;
+  bid: string;
+  dropPlayerId?: string;
+  addedPlayer?: TransactionPlayer;
+  droppedPlayer?: TransactionPlayer;
+}
+
+export interface MFLPendingWaiver {
+  comments: string;
+  timestamp: string;
+  round: string;
+  addsDrops: string;
+  claims: ParsedWaiverClaim[];
+  franchiseName?: string;
+  formattedTime?: string;
+  maxRosterPct?: number;
+  leagueId?: string;
+  leagueName?: string;
+  commentsFormatted?: string;
+}

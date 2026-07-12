@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getMyLeagues, getTransactions, loadPlayerCache, getCurrentWeek, getCurrentYear, getPlayerName, getPlayerPosition, getLeagueFull, getFranchiseName, formatDraftPick, formatTimestamp, MFL_COOKIE_NAME } from '$lib/api';
-import type { MFLTransaction } from '$lib/types';
+import { getMyLeagues, getTransactions, getPendingWaivers, loadPlayerCache, getCurrentWeek, getCurrentYear, getPlayerName, getPlayerPosition, getLeagueFull, getFranchiseName, formatDraftPick, formatTimestamp, MFL_COOKIE_NAME } from '$lib/api';
+import type { MFLTransaction, MFLPendingWaiver, ParsedWaiverClaim } from '$lib/types';
 
 function getTransactionDisplayName(type: string): string {
   switch (type) {
@@ -168,6 +168,77 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
           return (parseInt(b.timestamp || '0', 10) - parseInt(a.timestamp || '0', 10));
         });
         return json({ transactions: filtered });
+      }
+
+      case 'pendingWaivers': {
+        if (!leagueId) {
+          return json({ error: 'League ID required' }, { status: 400 });
+        }
+        const leagueIds = leagueId.split(',').map(id => id.trim()).filter(Boolean);
+        const players = await loadPlayerCache(cookie);
+
+        const leagueResults = await Promise.all(leagueIds.map(async (lid) => {
+          try {
+            const [waivers, league] = await Promise.all([
+              getPendingWaivers(lid, cookie),
+              getLeagueFull(lid, cookie)
+            ]);
+            return { leagueId: lid, leagueName: league?.name || lid, waivers, franchiseMap: league?.franchises || new Map<string, string>() };
+          } catch (e) {
+            console.error(`Failed to fetch pending waivers for league ${lid}:`, e);
+            return null;
+          }
+        }));
+
+        const allEnriched: MFLPendingWaiver[] = [];
+        for (const result of leagueResults) {
+          if (!result) continue;
+          const { leagueId: lid, leagueName, waivers, franchiseMap } = result;
+          for (const w of waivers) {
+            const claims: ParsedWaiverClaim[] = w.addsDrops.split(',').map(claim => {
+              const parts = claim.split('_');
+              const playerId = parts[0] || '';
+              const bid = parts[1] || '0';
+              const dropId = parts[2];
+              const dropPlayerId = dropId && dropId !== '0000' ? dropId : undefined;
+
+              const addedPlayer = {
+                id: playerId,
+                name: getPlayerName(players, playerId),
+                position: getPlayerPosition(players, playerId)?.toUpperCase(),
+                rosterPct: players.get(playerId)?.rosterPct
+              };
+
+              const droppedPlayer = dropPlayerId ? {
+                id: dropPlayerId,
+                name: getPlayerName(players, dropPlayerId),
+                position: getPlayerPosition(players, dropPlayerId)?.toUpperCase(),
+                rosterPct: players.get(dropPlayerId)?.rosterPct
+              } : undefined;
+
+              return { playerId, bid, dropPlayerId, addedPlayer, droppedPlayer };
+            });
+
+            const allPlayers = claims.flatMap(c => [c.addedPlayer, c.droppedPlayer].filter(Boolean));
+            const maxRosterPct = Math.max(...allPlayers.map(p => p!.rosterPct ?? 0), 0);
+            const commentsFormatted = w.comments.replace(/br\//g, '\n');
+            const franchiseName = franchiseMap.values().next().value || 'Your Team';
+
+            allEnriched.push({
+              ...w,
+              claims,
+              maxRosterPct,
+              formattedTime: formatTimestamp(w.timestamp),
+              commentsFormatted,
+              franchiseName,
+              leagueId: lid,
+              leagueName
+            });
+          }
+        }
+
+        allEnriched.sort((a, b) => (b.maxRosterPct || 0) - (a.maxRosterPct || 0));
+        return json({ pendingWaivers: allEnriched });
       }
 
       case 'players': {
