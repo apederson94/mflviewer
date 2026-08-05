@@ -31,6 +31,14 @@ interface YearWeekCache {
 
 let yearWeekCache: YearWeekCache | null = null;
 
+interface LeagueFullCacheEntry {
+  league: LeagueFull;
+  timestamp: number;
+}
+
+const leagueFullCache = new Map<string, LeagueFullCacheEntry>();
+const LEAGUE_CACHE_TTL_MS = 60 * 60 * 1000;
+
 interface PlayerCache {
   players: Map<string, PlayerInfo>;
   timestamp: number;
@@ -83,7 +91,7 @@ export async function getBaseUrl(): Promise<string> {
   return `https://api.myfantasyleague.com/${year}/export`;
 }
 
-export async function fetchJSON<T>(url: string, cookie?: string): Promise<T> {
+export async function fetchJSON<T>(url: string, cookie?: string, retries = 2): Promise<T> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json'
   };
@@ -91,9 +99,17 @@ export async function fetchJSON<T>(url: string, cookie?: string): Promise<T> {
   if (cookie) {
     headers['Cookie'] = cookie;
   }
-  
-  const response = await fetch(url, { headers });
-  
+
+  let response: Response;
+  for (let attempt = 0; ; attempt++) {
+    response = await fetch(url, { headers });
+    if (response.status === 429 && attempt < retries) {
+      await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+      continue;
+    }
+    break;
+  }
+
   if (!response.ok) {
     throw new Error(`MFL API error: ${response.status}`);
   }
@@ -199,6 +215,11 @@ export interface LeagueFull {
 }
 
 export async function getLeagueFull(leagueId: string, cookie?: string): Promise<LeagueFull | null> {
+  const cached = leagueFullCache.get(leagueId);
+  if (cached && Date.now() - cached.timestamp < LEAGUE_CACHE_TTL_MS) {
+    return cached.league;
+  }
+
   const baseUrl = await getBaseUrl();
   const url = `${baseUrl}?TYPE=league&L=${leagueId}&JSON=1`;
   
@@ -220,11 +241,15 @@ export async function getLeagueFull(leagueId: string, cookie?: string): Promise<
     
     console.log(`Fetched full league ${leagueId}, franchises: ${franchiseMap.size}`);
     
-    return {
+    const league: LeagueFull = {
       id: leagueIdVal,
       name: leagueName,
       franchises: franchiseMap
     };
+
+    leagueFullCache.set(leagueId, { league, timestamp: Date.now() });
+
+    return league;
   } catch (error) {
 console.error(`Fetch full league ${leagueId} failed: ${error}`);
     return null;

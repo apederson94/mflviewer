@@ -52,6 +52,7 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
         const players = await loadPlayerCache(cookie);
         const includeTrades = url.searchParams.get('includeTrades') === 'true';
 
+        const leagueErrors: string[] = [];
         const leagueResults = await Promise.all(leagueIds.map(async (lid) => {
           try {
             const [transactions, league] = await Promise.all([
@@ -60,10 +61,15 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
             ]);
             return { leagueId: lid, leagueName: league?.name || lid, transactions, franchiseMap: league?.franchises || new Map<string, string>() };
           } catch (e) {
+            leagueErrors.push(`${lid}: ${e instanceof Error ? e.message : String(e)}`);
             console.error(`Failed to fetch data for league ${lid}:`, e);
             return null;
           }
         }));
+
+        if (leagueResults.every(r => r === null)) {
+          return json({ transactions: [], error: `MFL request failed: ${leagueErrors.join('; ')}` }, { status: 502 });
+        }
 
         const allEnriched: MFLTransaction[] = [];
         for (const result of leagueResults) {
@@ -178,6 +184,7 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
         const leagueIds = leagueId.split(',').map(id => id.trim()).filter(Boolean);
         const players = await loadPlayerCache(cookie);
 
+        const waiverErrors: string[] = [];
         const leagueResults = await Promise.all(leagueIds.map(async (lid) => {
           try {
             const [waivers, league] = await Promise.all([
@@ -186,10 +193,15 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
             ]);
             return { leagueId: lid, leagueName: league?.name || lid, waivers, franchiseMap: league?.franchises || new Map<string, string>() };
           } catch (e) {
+            waiverErrors.push(`${lid}: ${e instanceof Error ? e.message : String(e)}`);
             console.error(`Failed to fetch pending waivers for league ${lid}:`, e);
             return null;
           }
         }));
+
+        if (leagueResults.every(r => r === null)) {
+          return json({ pendingWaivers: [], error: `MFL request failed: ${waiverErrors.join('; ')}` }, { status: 502 });
+        }
 
         const allEnriched: MFLPendingWaiver[] = [];
         for (const result of leagueResults) {
@@ -251,15 +263,21 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
         const leagueIds = leagueId.split(',').map(id => id.trim()).filter(Boolean);
         const players = await loadPlayerCache(cookie);
 
+        const faErrors: string[] = [];
         const leagueResults = await Promise.all(leagueIds.map(async (lid) => {
           try {
             const freeAgents = await getFreeAgents(lid, cookie);
             return { leagueId: lid, freeAgents };
           } catch (e) {
+            faErrors.push(`${lid}: ${e instanceof Error ? e.message : String(e)}`);
             console.error(`Failed to fetch free agents for league ${lid}:`, e);
             return null;
           }
         }));
+
+        if (leagueResults.every(r => r === null)) {
+          return json({ freeAgents: [], error: `MFL request failed: ${faErrors.join('; ')}` }, { status: 502 });
+        }
 
         const unionMap = new Map<string, { id: string; locked: boolean; availableIn: string[] }>();
         for (const result of leagueResults) {
