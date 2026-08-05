@@ -170,6 +170,10 @@
     return player?.position || 'UNK';
   }
 
+  function leagueName(leagueId: string): string {
+    return leagues.find(l => l.id === leagueId)?.name ?? leagueId;
+  }
+
   async function handleLogin(e: Event) {
     e.preventDefault();
     if (!loginUsername.trim() || !loginPassword.trim()) {
@@ -679,7 +683,10 @@
                       <span class="fa-lock">Locked</span>
                     {/if}
                     {#if fa.availableIn.length < totalLeagues}
-                      <span class="fa-avail">FA {fa.availableIn.length}/{totalLeagues}</span>
+                      <span class="fa-avail" title="Available in some selected leagues">FA</span>
+                      {#each fa.availableIn as lid}
+                        <span class="fa-avail">{leagueName(lid)}</span>
+                      {/each}
                     {/if}
                   </div>
                 </div>
@@ -2155,6 +2162,9 @@
     border-radius: 0;
     padding: 0.05rem 0.3rem;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
