@@ -174,6 +174,21 @@
     return leagues.find(l => l.id === leagueId)?.name ?? leagueId;
   }
 
+  let availTooltip = $state<{ x: number; y: number; leagues: string[] } | null>(null);
+
+  function showAvailTooltip(e: MouseEvent, leagues: string[]) {
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    availTooltip = {
+      x: Math.min(rect.left, window.innerWidth - 288 - 8),
+      y: rect.bottom + 8,
+      leagues
+    };
+  }
+
+  function hideAvailTooltip() {
+    availTooltip = null;
+  }
+
   async function handleLogin(e: Event) {
     e.preventDefault();
     if (!loginUsername.trim() || !loginPassword.trim()) {
@@ -683,10 +698,15 @@
                       <span class="fa-lock">Locked</span>
                     {/if}
                     {#if fa.availableIn.length < totalLeagues}
-                      <span class="fa-avail" title="Available in some selected leagues">FA</span>
-                      {#each fa.availableIn as lid}
-                        <span class="fa-avail">{leagueName(lid)}</span>
-                      {/each}
+                      <button
+                        type="button"
+                        class="fa-avail"
+                        onmouseenter={(e) => showAvailTooltip(e, fa.availableIn)}
+                        onmouseleave={hideAvailTooltip}
+                        onclick={(e) => { e.stopPropagation(); if (availTooltip && availTooltip.leagues === fa.availableIn) { hideAvailTooltip(); } else { showAvailTooltip(e, fa.availableIn); } }}
+                      >
+                        FA {fa.availableIn.length}/{totalLeagues}
+                      </button>
                     {/if}
                   </div>
                 </div>
@@ -709,6 +729,21 @@
       {/if}
     </main>
   </div>
+
+  {#if availTooltip}
+    <div
+      class="fa-tooltip"
+      style={`left:${availTooltip.x}px;top:${availTooltip.y}px`}
+      role="tooltip"
+    >
+      <span class="fa-tooltip-title">Available in</span>
+      <ul class="fa-tooltip-list">
+        {#each availTooltip.leagues as lid}
+          <li>{leagueName(lid)}</li>
+        {/each}
+      </ul>
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -2162,11 +2197,54 @@
     border-radius: 0;
     padding: 0.05rem 0.3rem;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 100%;
+    cursor: pointer;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+  }
+
+  .fa-tooltip {
+    position: fixed;
+    z-index: 200;
+    min-width: 180px;
+    max-width: 280px;
+    background: var(--text-primary);
+    color: var(--bg-secondary);
+    border: 2px solid var(--border);
+    box-shadow: var(--shadow-sm);
+    padding: 0.5rem;
+    pointer-events: none;
+  }
+
+  .fa-tooltip-title {
+    display: block;
+    font-size: 0.6rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--highlight);
+    margin-bottom: 0.35rem;
+  }
+
+  .fa-tooltip-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  .fa-tooltip-list li {
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 0.15rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .fa-tooltip-list li:last-child {
+    border-bottom: none;
   }
 
   .fa-mobile-search {
