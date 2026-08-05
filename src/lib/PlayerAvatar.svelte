@@ -61,8 +61,8 @@
     justify-content: center;
     font-size: 0.75rem;
     font-weight: 900;
-    color: #44403c;
-    background: #e7e5e4;
+    color: var(--pos-unk-text);
+    background: var(--pos-unk-bg);
     border: 2px solid var(--border);
     text-transform: uppercase;
   }

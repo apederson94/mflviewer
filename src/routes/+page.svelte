@@ -189,6 +189,21 @@
     availTooltip = null;
   }
 
+  let theme = $state<'light' | 'dark'>(
+    typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'
+  );
+
+  $effect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    try {
+      window.localStorage.setItem('mfl-theme', theme);
+    } catch (e) {}
+  });
+
+  function toggleTheme() {
+    theme = theme === 'dark' ? 'light' : 'dark';
+  }
+
   async function handleLogin(e: Event) {
     e.preventDefault();
     if (!loginUsername.trim() || !loginPassword.trim()) {
@@ -276,6 +291,9 @@
       <h1>MFL Transaction Viewer <span class="week">Week {data.week}</span></h1>
     </div>
     <div class="header-mobile-controls">
+      <button class="theme-toggle" onclick={toggleTheme} aria-label="Toggle dark mode">
+        {theme === 'dark' ? 'Light' : 'Dark'}
+      </button>
       <div class="auth-row-mobile">
           {#if isLoggedIn}
             <button onclick={handleLogout} class="login-btn">Logout</button>
@@ -299,6 +317,9 @@
       </div>
     </div>
     <div class="auth-row">
+        <button class="theme-toggle" onclick={toggleTheme} aria-label="Toggle dark mode">
+          {theme === 'dark' ? 'Light' : 'Dark'}
+        </button>
         {#if isLoggedIn}
           <button onclick={handleLogout} class="login-btn">Logout</button>
         {:else}
@@ -747,34 +768,6 @@
 </div>
 
 <style>
-  :root {
-    --bg-primary: #f4f1ea;
-    --bg-secondary: #ffffff;
-    --bg-card: #ffffff;
-    --bg-paper: #fffdf6;
-    --border: #111111;
-    --accent: #111111;
-    --accent-hover: #000000;
-    --highlight: #ffde00;
-    --text-primary: #111111;
-    --text-secondary: #3f3d39;
-    --text-muted: #6d6a64;
-    --error-bg: #ffde00;
-    --error-border: #111111;
-    --error-text: #111111;
-
-    --trade-color: #6d28d9;
-    --waiver-color: #c2410c;
-    --free-agent-color: #047857;
-    --franchise-color: #1d4ed8;
-    --system-color: #a16207;
-    --drop-color: #b91c1c;
-
-    --card-shadow: 5px 5px 0 #111111;
-    --card-shadow-hover: 7px 7px 0 #111111;
-    --shadow-sm: 3px 3px 0 #111111;
-  }
-
   .app {
     min-height: 100vh;
     display: flex;
@@ -812,7 +805,7 @@
   .title-row .week {
     margin-left: 0.5rem;
     font-size: 0.75rem;
-    color: var(--text-primary);
+    color: var(--on-highlight);
     font-weight: 900;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -826,6 +819,33 @@
   .auth-row {
     display: flex;
     align-items: center;
+    gap: 0.5rem;
+  }
+
+  .theme-toggle {
+    padding: 0.5rem 0.9rem;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 2px solid var(--border);
+    border-radius: 0;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.1s ease;
+    white-space: nowrap;
+  }
+
+  .theme-toggle:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: var(--card-shadow);
+  }
+
+  .theme-toggle:active {
+    transform: translate(1px, 1px);
+    box-shadow: none;
   }
 
   .github-stars img {
@@ -879,7 +899,8 @@
   .login-form button:hover, .login-btn:hover {
     transform: translate(-1px, -1px);
     box-shadow: var(--card-shadow);
-    background: #000000;
+    background: var(--highlight);
+    color: var(--on-highlight);
   }
 
   .login-form button:active, .login-btn:active {
@@ -988,6 +1009,11 @@
     background: var(--highlight);
     border-color: var(--border);
     box-shadow: var(--shadow-sm);
+    color: var(--on-highlight);
+  }
+
+  .league-checkbox-label:hover .league-name {
+    color: var(--on-highlight);
   }
 
   .league-checkbox-label input[type="checkbox"] {
@@ -1321,24 +1347,24 @@
 
   .transaction-card[data-type="Trade"] .transaction-type {
     color: var(--trade-color);
-    background: #ede9fe;
+    background: var(--type-trade-bg);
   }
 
   .transaction-card[data-type="FA Pickup"] .transaction-type,
   .transaction-card[data-type="Free Agent"] .transaction-type,
   .transaction-card[data-type="Add/Drop"] .transaction-type {
     color: var(--free-agent-color);
-    background: #d1fae5;
+    background: var(--type-fa-bg);
   }
 
   .transaction-card[data-type="Waiver"] .transaction-type {
     color: var(--waiver-color);
-    background: #ffedd5;
+    background: var(--type-waiver-bg);
   }
 
   .transaction-card:not([data-type="Trade"]):not([data-type="FA Pickup"]):not([data-type="Free Agent"]):not([data-type="Add/Drop"]):not([data-type="Waiver"]) .transaction-type {
     color: var(--text-secondary);
-    background: var(--bg-paper);
+    background: var(--type-other-bg);
   }
 
   .league-tag {
@@ -1517,70 +1543,70 @@
   }
 
   :global(.position-badge[data-position="QB"]) {
-    background: #ede9fe;
-    color: #5b21b6;
+    background: var(--pos-qb-bg);
+    color: var(--pos-qb-text);
   }
 
   :global(.position-badge[data-position="RB"]) {
-    background: #d1fae5;
-    color: #065f46;
+    background: var(--pos-rb-bg);
+    color: var(--pos-rb-text);
   }
 
   :global(.position-badge[data-position="WR"]) {
-    background: #ffedd5;
-    color: #9a3412;
+    background: var(--pos-wr-bg);
+    color: var(--pos-wr-text);
   }
 
   :global(.position-badge[data-position="TE"]) {
-    background: #dbeafe;
-    color: #1e40af;
+    background: var(--pos-te-bg);
+    color: var(--pos-te-text);
   }
 
   :global(.position-badge[data-position="K"]) {
-    background: #fce7f3;
-    color: #9d174d;
+    background: var(--pos-k-bg);
+    color: var(--pos-k-text);
   }
 
   :global(.position-badge[data-position="DT"]) {
-    background: #fee2e2;
-    color: #991b1b;
+    background: var(--pos-dt-bg);
+    color: var(--pos-dt-text);
   }
 
   :global(.position-badge[data-position="DE"]) {
-    background: #ffedd5;
-    color: #9a3412;
+    background: var(--pos-de-bg);
+    color: var(--pos-de-text);
   }
 
   :global(.position-badge[data-position="LB"]) {
-    background: #e0e7ff;
-    color: #4338ca;
+    background: var(--pos-lb-bg);
+    color: var(--pos-lb-text);
   }
 
   :global(.position-badge[data-position="CB"]) {
-    background: #ede9fe;
-    color: #6d28d9;
+    background: var(--pos-cb-bg);
+    color: var(--pos-cb-text);
   }
 
   :global(.position-badge[data-position="S"]) {
-    background: #ccfbf1;
-    color: #115e59;
+    background: var(--pos-s-bg);
+    color: var(--pos-s-text);
   }
 
   :global(.position-badge[data-position="DST"]),
   :global(.position-badge[data-position="DEF"]),
   :global(.position-badge[data-position="DFL"]) {
-    background: #fef9c3;
-    color: #854d0e;
+    background: var(--pos-dst-bg);
+    color: var(--pos-dst-text);
   }
 
   :global(.position-badge[data-position="UNK"]) {
-    background: #e7e5e4;
-    color: #44403c;
+    background: var(--pos-unk-bg);
+    color: var(--pos-unk-text);
   }
 
   :global(.position-badge[data-position="PICK"]) {
-    background: #d6d3d1;
-    color: #292524;
+    background: var(--pos-pick-bg);
+    color: var(--pos-pick-text);
   }
 
   .tx-bid {
@@ -1741,7 +1767,7 @@
     .mobile-filters-count {
       font-size: 0.7rem;
       font-weight: 900;
-      color: var(--text-primary);
+      color: var(--on-highlight);
       background: var(--highlight);
       border: 1px solid var(--border);
       padding: 0.05rem 0.35rem;
@@ -1883,7 +1909,7 @@
   .tab-count {
     font-size: 0.7rem;
     background: var(--highlight);
-    color: var(--text-primary);
+    color: var(--on-highlight);
     border: 1px solid var(--border);
     padding: 0.05rem 0.35rem;
     font-weight: 900;
@@ -1961,7 +1987,7 @@
     text-transform: uppercase;
     letter-spacing: 0.5px;
     color: var(--waiver-color);
-    background: #ffedd5;
+    background: var(--type-waiver-bg);
     border: 1px solid var(--border);
   }
 
@@ -1994,8 +2020,8 @@
     font-weight: 900;
     padding: 0.15rem 0.4rem;
     border-radius: 0;
-    background: var(--text-primary);
-    color: var(--highlight);
+    background: var(--highlight);
+    color: var(--on-highlight);
     border: 1px solid var(--border);
     flex-shrink: 0;
     margin-top: 0.15rem;
@@ -2178,8 +2204,8 @@
   .fa-lock {
     font-size: 0.65rem;
     font-weight: 900;
-    color: #854d0e;
-    background: #fef9c3;
+    color: var(--tint-amber-text);
+    background: var(--tint-amber-bg);
     border: 1px solid var(--border);
     border-radius: 0;
     padding: 0.05rem 0.3rem;
@@ -2192,7 +2218,7 @@
     font-size: 0.65rem;
     font-weight: 900;
     color: var(--free-agent-color);
-    background: #d1fae5;
+    background: var(--tint-green-bg);
     border: 1px solid var(--border);
     border-radius: 0;
     padding: 0.05rem 0.3rem;
@@ -2207,8 +2233,8 @@
     z-index: 200;
     min-width: 180px;
     max-width: 280px;
-    background: var(--text-primary);
-    color: var(--bg-secondary);
+    background: var(--tooltip-bg);
+    color: var(--tooltip-text);
     border: 2px solid var(--border);
     box-shadow: var(--shadow-sm);
     padding: 0.5rem;
@@ -2221,7 +2247,7 @@
     font-weight: 900;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    color: var(--highlight);
+    color: var(--tooltip-title);
     margin-bottom: 0.35rem;
   }
 
@@ -2237,7 +2263,7 @@
     font-size: 0.8rem;
     font-weight: 700;
     padding: 0.15rem 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+    border-bottom: 1px solid var(--tooltip-sep);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;

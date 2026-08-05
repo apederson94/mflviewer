@@ -64,8 +64,8 @@
     border-radius: 0;
     padding: 0.075rem 0.3rem;
     white-space: nowrap;
-    background: var(--team-bg, #e7e5e4);
-    color: var(--team-text, #44403c);
+    background: var(--team-bg, var(--pos-unk-bg));
+    color: var(--team-text, var(--pos-unk-text));
     border: 1px solid var(--border);
     flex-shrink: 0;
   }
