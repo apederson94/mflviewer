@@ -13,11 +13,14 @@
 
   let failed = $state(false);
 
+  const isFaab = $derived(position === 'FAAB' || id.startsWith('BB_'));
   const src = $derived('/api/player-image/' + encodeURIComponent(id));
   const initial = $derived(position && position !== 'UNK' ? position[0] : '?');
 </script>
 
-{#if failed}
+{#if isFaab}
+  <span class="player-photo player-photo-fallback player-photo-faab" class:sm={size === 'sm'} class:lg={size === 'lg'}>$</span>
+{:else if failed}
   <span class="player-photo player-photo-fallback" class:sm={size === 'sm'} class:lg={size === 'lg'}>{initial}</span>
 {:else}
   <img
@@ -73,5 +76,10 @@
 
   .player-photo-fallback.lg {
     font-size: 1rem;
+  }
+
+  .player-photo-faab {
+    color: var(--pos-rb-text);
+    background: var(--pos-rb-bg);
   }
 </style>
