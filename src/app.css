@@ -100,16 +100,16 @@ button, input, select {
   --error-border: #4c463f;
   --error-text: #1a1204;
 
-  --trade-color: #a78bfa;
-  --waiver-color: #fb923c;
+  --trade-color: #8f88c9;
+  --waiver-color: #bf8a55;
   --free-agent-color: #6cb290;
   --franchise-color: #60a5fa;
   --system-color: #fbbf24;
   --drop-color: #f87171;
 
-  --type-trade-bg: rgba(167, 139, 250, 0.16);
+  --type-trade-bg: rgba(143, 136, 201, 0.18);
   --type-fa-bg: rgba(108, 178, 144, 0.18);
-  --type-waiver-bg: rgba(251, 146, 60, 0.16);
+  --type-waiver-bg: rgba(191, 138, 85, 0.18);
   --type-other-bg: var(--bg-paper);
 
   --tint-green-bg: rgba(108, 178, 144, 0.18);
@@ -123,15 +123,15 @@ button, input, select {
   --tooltip-title: #ffb703;
   --tooltip-sep: rgba(255, 255, 255, 0.12);
 
-  --pos-qb-bg: rgba(167, 139, 250, 0.18); --pos-qb-text: #c4b5fd;
+  --pos-qb-bg: rgba(143, 136, 201, 0.20); --pos-qb-text: #a9a2d6;
   --pos-rb-bg: rgba(108, 178, 144, 0.20); --pos-rb-text: #93c9ae;
-  --pos-wr-bg: rgba(251, 146, 60, 0.18); --pos-wr-text: #fdba74;
+  --pos-wr-bg: rgba(191, 138, 85, 0.20); --pos-wr-text: #c9a479;
   --pos-te-bg: rgba(96, 165, 250, 0.18); --pos-te-text: #93c5fd;
   --pos-k-bg: rgba(244, 114, 182, 0.18); --pos-k-text: #f9a8d4;
   --pos-dt-bg: rgba(248, 113, 113, 0.18); --pos-dt-text: #fca5a5;
-  --pos-de-bg: rgba(251, 146, 60, 0.18); --pos-de-text: #fdba74;
+  --pos-de-bg: rgba(191, 138, 85, 0.20); --pos-de-text: #c9a479;
   --pos-lb-bg: rgba(129, 140, 248, 0.18); --pos-lb-text: #a5b4fc;
-  --pos-cb-bg: rgba(139, 92, 246, 0.18); --pos-cb-text: #c4b5fd;
+  --pos-cb-bg: rgba(143, 136, 201, 0.20); --pos-cb-text: #a9a2d6;
   --pos-s-bg: rgba(20, 184, 166, 0.18); --pos-s-text: #5eead4;
   --pos-dst-bg: rgba(251, 191, 36, 0.18); --pos-dst-text: #fcd34d;
   --pos-unk-bg: rgba(120, 113, 108, 0.25); --pos-unk-text: #d6d3d1;
