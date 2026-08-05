@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getMyLeagues, getTransactions, getPendingWaivers, getFreeAgents, loadPlayerCache, getCurrentWeek, getCurrentYear, getPlayerName, getPlayerPosition, getLeagueFull, getFranchiseName, formatDraftPick, formatTimestamp, MFL_COOKIE_NAME } from '$lib/api';
-import type { MFLTransaction, MFLPendingWaiver, MFLFreeAgent, ParsedWaiverClaim } from '$lib/types';
+import { getMyLeagues, getTransactions, getPendingWaivers, getFreeAgents, loadPlayerCache, getCurrentWeek, getCurrentYear, getPlayerName, getPlayerPosition, getLeagueFull, getFranchiseName, formatDraftPick, formatFaab, formatTimestamp, MFL_COOKIE_NAME } from '$lib/api';
+import type { MFLTransaction, MFLPendingWaiver, MFLFreeAgent, ParsedWaiverClaim, PlayerInfo } from '$lib/types';
 import { warmPlayerImages } from '$lib/playerImages';
 
 function getTransactionDisplayName(type: string): string {
@@ -27,6 +27,18 @@ function parseBBIDWaiverTransaction(transaction: string): { added: string[]; dro
   const bid = parts[1]?.trim() || '';
   const dropped = parts[2]?.split(',').map(id => id.trim()).filter(Boolean) || [];
   return { added, dropped, bid };
+}
+
+function resolveTradeItem(id: string, players: Map<string, PlayerInfo>, currentYear: string): { id: string; name: string; position: string; team?: string; rosterPct?: number } {
+  const cleanId = id.trim();
+  if (cleanId.startsWith('BB_')) {
+    return { id: cleanId, name: formatFaab(cleanId), position: 'FAAB' };
+  }
+  if (cleanId.startsWith('FP_') || cleanId.startsWith('DP_')) {
+    return { id: cleanId, name: formatDraftPick(cleanId, currentYear), position: 'PICK' };
+  }
+  const rosterPct = players.get(cleanId)?.rosterPct;
+  return { id: cleanId, name: getPlayerName(players, cleanId), position: getPlayerPosition(players, cleanId)?.toUpperCase(), team: players.get(cleanId)?.team, rosterPct };
 }
 
 export const GET: RequestHandler = async ({ cookies, url }) => {
@@ -83,22 +95,8 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
               const f1Gave = t.franchise1_gave_up?.split(',').filter(Boolean) || [];
               const f2Gave = t.franchise2_gave_up?.split(',').filter(Boolean) || [];
               
-              const f1Names = f1Gave.map(id => {
-                const cleanId = id.trim();
-                if (cleanId.startsWith('FP_') || cleanId.startsWith('DP_')) {
-                  return { id: cleanId, name: formatDraftPick(cleanId, currentYear), position: 'PICK' };
-                }
-                const rosterPct = players.get(cleanId)?.rosterPct;
-                return { id: cleanId, name: getPlayerName(players, cleanId), position: getPlayerPosition(players, cleanId)?.toUpperCase(), team: players.get(cleanId)?.team, rosterPct };
-              });
-              const f2Names = f2Gave.map(id => {
-                const cleanId = id.trim();
-                if (cleanId.startsWith('FP_') || cleanId.startsWith('DP_')) {
-                  return { id: cleanId, name: formatDraftPick(cleanId, currentYear), position: 'PICK' };
-                }
-                const rosterPct = players.get(cleanId)?.rosterPct;
-                return { id: cleanId, name: getPlayerName(players, cleanId), position: getPlayerPosition(players, cleanId)?.toUpperCase(), team: players.get(cleanId)?.team, rosterPct };
-              });
+              const f1Names = f1Gave.map(id => resolveTradeItem(id, players, currentYear));
+              const f2Names = f2Gave.map(id => resolveTradeItem(id, players, currentYear));
 
               const formattedTime = t.timestamp ? formatTimestamp(t.timestamp) : '';
               const allPlayers = [...f1Names, ...f2Names];

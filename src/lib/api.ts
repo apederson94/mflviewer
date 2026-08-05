@@ -360,6 +360,11 @@ export function formatDraftPick(pickId: string, currentYear?: string): string {
   return pickId;
 }
 
+export function formatFaab(id: string): string {
+  const amount = id.replace(/^BB_/, '');
+  return `FAAB $${amount}`;
+}
+
 export function formatTimestamp(timestamp: string): string {
   if (!timestamp) return '';
   const date = new Date(parseInt(timestamp, 10) * 1000);

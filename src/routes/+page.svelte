@@ -1610,12 +1610,22 @@
     color: var(--pos-pick-text);
   }
 
+  :global(.position-badge[data-position="FAAB"]) {
+    background: var(--pos-faab-bg);
+    color: var(--pos-faab-text);
+  }
+
   .tx-bid {
+    display: inline-block;
+    margin-top: 0.5rem;
     color: var(--waiver-color);
-    margin-left: 0.5rem;
+    background: var(--type-waiver-bg);
+    border: 1px solid var(--border);
+    border-radius: 0;
+    padding: 0.1rem 0.4rem;
     font-weight: 900;
     text-transform: uppercase;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
   }
 
   .tx-timestamp {
@@ -2056,10 +2066,16 @@
   }
 
   .priority-bid {
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     font-weight: 900;
     color: var(--waiver-color);
+    background: var(--type-waiver-bg);
+    border: 1px solid var(--border);
+    border-radius: 0;
+    padding: 0.1rem 0.4rem;
     flex-shrink: 0;
+    white-space: nowrap;
+    margin-left: 0.25rem;
   }
 
   .no-drop {
