@@ -38,9 +38,9 @@
   .player-photo {
     width: 36px;
     height: 36px;
-    border-radius: 6px;
+    border-radius: 0;
     object-fit: cover;
-    border: 1px solid var(--border);
+    border: 2px solid var(--border);
     background: var(--bg-primary);
     flex-shrink: 0;
   }
@@ -48,13 +48,11 @@
   .player-photo.sm {
     width: 24px;
     height: 24px;
-    border-radius: 4px;
   }
 
   .player-photo.lg {
     width: 44px;
     height: 44px;
-    border-radius: 8px;
   }
 
   .player-photo-fallback {
@@ -62,9 +60,10 @@
     align-items: center;
     justify-content: center;
     font-size: 0.75rem;
-    font-weight: 700;
-    color: var(--text-secondary);
-    background: rgba(100, 116, 139, 0.2);
+    font-weight: 900;
+    color: #44403c;
+    background: #e7e5e4;
+    border: 2px solid var(--border);
     text-transform: uppercase;
   }
 

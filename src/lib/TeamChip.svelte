@@ -61,12 +61,12 @@
   .team-chip {
     font-size: 0.75rem;
     font-weight: 700;
-    border-radius: 3px;
+    border-radius: 0;
     padding: 0.075rem 0.3rem;
     white-space: nowrap;
-    background: var(--team-bg, rgba(100, 116, 139, 0.2));
-    color: var(--team-text, var(--text-secondary));
-    border: 1px solid var(--team-bg, var(--border));
+    background: var(--team-bg, #e7e5e4);
+    color: var(--team-text, #44403c);
+    border: 1px solid var(--border);
     flex-shrink: 0;
   }
 </style>
