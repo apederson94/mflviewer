@@ -7,7 +7,7 @@
   }: {
     id: string;
     position?: string;
-    size?: 'sm' | 'md';
+    size?: 'sm' | 'md' | 'lg';
     alt?: string;
   } = $props();
 
@@ -18,11 +18,12 @@
 </script>
 
 {#if failed}
-  <span class="player-photo player-photo-fallback" class:sm={size === 'sm'}>{initial}</span>
+  <span class="player-photo player-photo-fallback" class:sm={size === 'sm'} class:lg={size === 'lg'}>{initial}</span>
 {:else}
   <img
     class="player-photo"
     class:sm={size === 'sm'}
+    class:lg={size === 'lg'}
     src={src}
     alt={alt}
     loading="lazy"
@@ -50,6 +51,12 @@
     border-radius: 4px;
   }
 
+  .player-photo.lg {
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+  }
+
   .player-photo-fallback {
     display: flex;
     align-items: center;
@@ -63,5 +70,9 @@
 
   .player-photo-fallback.sm {
     font-size: 0.65rem;
+  }
+
+  .player-photo-fallback.lg {
+    font-size: 1rem;
   }
 </style>

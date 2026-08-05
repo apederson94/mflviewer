@@ -3,6 +3,8 @@
   import type { PageData } from './$types';
   import type { StoredLeague, MFLTransaction, MFLPendingWaiver, MFLFreeAgent } from '$lib';
   import PlayerAvatar from '$lib/PlayerAvatar.svelte';
+  import TeamChip from '$lib/TeamChip.svelte';
+  import PlayerRow from '$lib/PlayerRow.svelte';
 
   let { data }: { data: PageData } = $props();
 
@@ -52,55 +54,6 @@
   let totalLeagues = $derived(selectedLeagueIds.size);
 
   const faPositions = ['ALL', 'QB', 'RB', 'WR', 'TE', 'K', 'DST', 'DT', 'DE', 'LB', 'CB', 'S'];
-
-  const NFL_TEAM_COLORS: Record<string, string> = {
-    ARI: '#97233F', AZN: '#97233F',
-    ATL: '#A71930',
-    BAL: '#241773',
-    BUF: '#00338D',
-    CAR: '#0085CA',
-    CHI: '#0B162A',
-    CIN: '#FB4F14',
-    CLE: '#311D00',
-    DAL: '#003594',
-    DEN: '#002244',
-    DET: '#0076B6',
-    GB: '#203731', GBP: '#203731',
-    HOU: '#03202F',
-    IND: '#002C5F',
-    JAC: '#006778', JAX: '#006778',
-    KC: '#E31837', KCC: '#E31837',
-    LAC: '#0080C6',
-    LAR: '#003594',
-    LV: '#A5ACAF', LVR: '#A5ACAF',
-    MIA: '#008E97',
-    MIN: '#4F2683',
-    NE: '#002244', NEP: '#002244',
-    NO: '#D3BC8D', NOS: '#D3BC8D',
-    NYG: '#0B2265',
-    NYJ: '#125740',
-    PHI: '#004C54',
-    PIT: '#FFB612',
-    SD: '#002244',
-    SF: '#AA0000', SFO: '#AA0000',
-    SEA: '#002244',
-    STL: '#002244',
-    TB: '#D50A0A', TBB: '#D50A0A',
-    TEN: '#0C2340',
-    WAS: '#773141', WSH: '#773141'
-  };
-
-  function getTeamColor(team: string): string {
-    return NFL_TEAM_COLORS[team.toUpperCase()] || '';
-  }
-
-  function contrastText(hex: string): string {
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-    return lum > 0.6 ? '#000000' : '#ffffff';
-  }
 
   let filteredFreeAgents = $derived(
     freeAgents.filter(fa => {
@@ -543,14 +496,7 @@
                           {#if transaction.tradeReceives?.length}
                             <div class="player-list">
                               {#each transaction.tradeReceives as player}
-                                <div class="player-item">
-                                  <PlayerAvatar id={player.id} position={player.position} size="sm" />
-                                  {#if player.position}
-                                    <span class="position-badge" data-position={player.position}>{player.position}</span>
-                                  {/if}
-                                  <span class="player-name">{player.name}</span>
-                                  {#if player.rosterPct != null}<span class="roster-badge">{player.rosterPct.toFixed(1)}%</span>{/if}
-                                </div>
+                                <PlayerRow id={player.id} name={player.name} position={player.position} team={player.team} rosterPct={player.rosterPct} />
                               {/each}
                             </div>
                           {:else}
@@ -564,14 +510,7 @@
                           {#if transaction.tradeGives?.length}
                             <div class="player-list">
                               {#each transaction.tradeGives as player}
-                                <div class="player-item">
-                                  <PlayerAvatar id={player.id} position={player.position} size="sm" />
-                                  {#if player.position}
-                                    <span class="position-badge" data-position={player.position}>{player.position}</span>
-                                  {/if}
-                                  <span class="player-name">{player.name}</span>
-                                  {#if player.rosterPct != null}<span class="roster-badge">{player.rosterPct.toFixed(1)}%</span>{/if}
-                                </div>
+                                <PlayerRow id={player.id} name={player.name} position={player.position} team={player.team} rosterPct={player.rosterPct} />
                               {/each}
                             </div>
                           {:else}
@@ -594,14 +533,7 @@
                           {#if transaction.addedPlayers?.length}
                             <div class="player-list">
                               {#each transaction.addedPlayers as player}
-                                <span class="player-item">
-                                  <PlayerAvatar id={player.id} position={player.position} size="sm" />
-                                  {#if player.position}
-                                    <span class="position-badge" data-position={player.position}>{player.position}</span>
-                                  {/if}
-                                  <span class="player-name">{player.name}</span>
-                                  {#if player.rosterPct != null}<span class="roster-badge">{player.rosterPct.toFixed(1)}%</span>{/if}
-                                </span>
+                                <PlayerRow id={player.id} name={player.name} position={player.position} team={player.team} rosterPct={player.rosterPct} />
                               {/each}
                             </div>
                           {:else}
@@ -615,14 +547,7 @@
                           {#if transaction.droppedPlayers?.length}
                             <div class="player-list">
                               {#each transaction.droppedPlayers as player}
-                                <span class="player-item">
-                                  <PlayerAvatar id={player.id} position={player.position} size="sm" />
-                                  {#if player.position}
-                                    <span class="position-badge" data-position={player.position}>{player.position}</span>
-                                  {/if}
-                                  <span class="player-name">{player.name}</span>
-                                  {#if player.rosterPct != null}<span class="roster-badge">{player.rosterPct.toFixed(1)}%</span>{/if}
-                                </span>
+                                <PlayerRow id={player.id} name={player.name} position={player.position} team={player.team} rosterPct={player.rosterPct} />
                               {/each}
                             </div>
                           {:else}
@@ -680,32 +605,14 @@
                             <div class="priority-row">
                               <span class="priority-label">Add</span>
                               {#if claim.addedPlayer}
-                                <div class="player-item">
-                                  <PlayerAvatar id={claim.addedPlayer.id} position={claim.addedPlayer.position} size="sm" />
-                                  {#if claim.addedPlayer.position}
-                                    <span class="position-badge" data-position={claim.addedPlayer.position}>{claim.addedPlayer.position}</span>
-                                  {/if}
-                                  <span class="player-name">{claim.addedPlayer.name}</span>
-                                  {#if claim.addedPlayer.rosterPct != null}
-                                    <span class="roster-badge">{claim.addedPlayer.rosterPct.toFixed(1)}%</span>
-                                  {/if}
-                                </div>
+                                <PlayerRow id={claim.addedPlayer.id} name={claim.addedPlayer.name} position={claim.addedPlayer.position} team={claim.addedPlayer.team} rosterPct={claim.addedPlayer.rosterPct} />
                               {/if}
                               <span class="priority-bid">${claim.bid}</span>
                             </div>
                             <div class="priority-row">
                               <span class="priority-label">Drop</span>
                               {#if claim.droppedPlayer}
-                                <div class="player-item">
-                                  <PlayerAvatar id={claim.droppedPlayer.id} position={claim.droppedPlayer.position} size="sm" />
-                                  {#if claim.droppedPlayer.position}
-                                    <span class="position-badge" data-position={claim.droppedPlayer.position}>{claim.droppedPlayer.position}</span>
-                                  {/if}
-                                  <span class="player-name">{claim.droppedPlayer.name}</span>
-                                  {#if claim.droppedPlayer.rosterPct != null}
-                                    <span class="roster-badge">{claim.droppedPlayer.rosterPct.toFixed(1)}%</span>
-                                  {/if}
-                                </div>
+                                <PlayerRow id={claim.droppedPlayer.id} name={claim.droppedPlayer.name} position={claim.droppedPlayer.position} team={claim.droppedPlayer.team} rosterPct={claim.droppedPlayer.rosterPct} />
                               {:else}
                                 <span class="no-drop">None</span>
                               {/if}
@@ -764,13 +671,7 @@
                     <span class="player-name">{fa.name}</span>
                   </div>
                   <div class="fa-card-meta">
-                    {#if fa.team}
-                      {@const teamColor = getTeamColor(fa.team)}
-                      <span
-                        class="fa-team"
-                        style={teamColor ? `--team-bg:${teamColor};--team-text:${contrastText(teamColor)}` : ''}
-                      >{fa.team}</span>
-                    {/if}
+                    <TeamChip team={fa.team} />
                     {#if fa.rosterPct != null}
                       <span class="roster-badge">{fa.rosterPct.toFixed(1)}%</span>
                     {/if}
@@ -1232,14 +1133,13 @@
     accent-color: var(--accent);
   }
 
-  .roster-badge {
+  :global(.roster-badge) {
     font-size: 0.7rem;
     color: var(--text-secondary);
     background: var(--bg-primary);
     border: 1px solid var(--border);
     border-radius: 3px;
     padding: 0.075rem 0.3rem;
-    margin-left: 0.25rem;
     white-space: nowrap;
   }
 
@@ -1490,24 +1390,11 @@
   .player-list {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
-    align-items: flex-start;
-    width: 100%;
-  }
-
-  .player-item {
-    display: flex;
-    align-items: center;
     gap: 0.35rem;
     width: 100%;
   }
 
-  .player-name {
-    color: var(--text-primary);
-    text-align: left;
-  }
-
-  .position-badge {
+  :global(.position-badge) {
     font-size: 0.65rem;
     font-weight: 700;
     padding: 0.1rem 0.35rem;
@@ -1516,69 +1403,69 @@
     flex-shrink: 0;
   }
 
-  .position-badge[data-position="QB"] {
+  :global(.position-badge[data-position="QB"]) {
     background: rgba(167, 139, 250, 0.2);
     color: #a78bfa;
   }
 
-  .position-badge[data-position="RB"] {
+  :global(.position-badge[data-position="RB"]) {
     background: rgba(52, 211, 153, 0.2);
     color: #34d399;
   }
 
-  .position-badge[data-position="WR"] {
+  :global(.position-badge[data-position="WR"]) {
     background: rgba(249, 115, 22, 0.2);
     color: #f97316;
   }
 
-  .position-badge[data-position="TE"] {
+  :global(.position-badge[data-position="TE"]) {
     background: rgba(96, 165, 250, 0.2);
     color: #60a5fa;
   }
 
-  .position-badge[data-position="K"] {
+  :global(.position-badge[data-position="K"]) {
     background: rgba(244, 114, 182, 0.2);
     color: #f472b6;
   }
 
-  .position-badge[data-position="DT"] {
+  :global(.position-badge[data-position="DT"]) {
     background: rgba(239, 68, 68, 0.2);
     color: #ef4444;
   }
 
-  .position-badge[data-position="DE"] {
+  :global(.position-badge[data-position="DE"]) {
     background: rgba(249, 115, 22, 0.2);
     color: #f97316;
   }
 
-  .position-badge[data-position="LB"] {
+  :global(.position-badge[data-position="LB"]) {
     background: rgba(99, 102, 241, 0.2);
     color: #6366f1;
   }
 
-  .position-badge[data-position="CB"] {
+  :global(.position-badge[data-position="CB"]) {
     background: rgba(139, 92, 246, 0.2);
     color: #8b5cf6;
   }
 
-  .position-badge[data-position="S"] {
+  :global(.position-badge[data-position="S"]) {
     background: rgba(20, 184, 166, 0.2);
     color: #14b8a6;
   }
 
-  .position-badge[data-position="DST"],
-  .position-badge[data-position="DEF"],
-  .position-badge[data-position="DFL"] {
+  :global(.position-badge[data-position="DST"]),
+  :global(.position-badge[data-position="DEF"]),
+  :global(.position-badge[data-position="DFL"]) {
     background: rgba(251, 191, 36, 0.25);
     color: #fbbf24;
   }
 
-  .position-badge[data-position="UNK"] {
+  :global(.position-badge[data-position="UNK"]) {
     background: rgba(100, 116, 139, 0.2);
     color: #94a3b8;
   }
 
-  .position-badge[data-position="PICK"] {
+  :global(.position-badge[data-position="PICK"]) {
     background: rgba(156, 163, 175, 0.25);
     color: #d1d5db;
     border: 1px solid rgba(156, 163, 175, 0.4);
@@ -2063,7 +1950,7 @@
     flex-shrink: 0;
   }
 
-  .priority-row .player-item {
+  :global(.priority-row .player-row) {
     flex: 1;
     min-width: 0;
   }
@@ -2221,17 +2108,6 @@
     align-items: center;
     flex-wrap: wrap;
     gap: 0.35rem;
-  }
-
-  .fa-team {
-    font-size: 0.75rem;
-    font-weight: 700;
-    border-radius: 3px;
-    padding: 0.075rem 0.3rem;
-    white-space: nowrap;
-    background: var(--team-bg, rgba(100, 116, 139, 0.2));
-    color: var(--team-text, var(--text-secondary));
-    border: 1px solid var(--team-bg, var(--border));
   }
 
   .fa-lock {

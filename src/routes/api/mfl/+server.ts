@@ -83,7 +83,7 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
                   return { id: cleanId, name: formatDraftPick(cleanId, currentYear), position: 'PICK' };
                 }
                 const rosterPct = players.get(cleanId)?.rosterPct;
-                return { id: cleanId, name: getPlayerName(players, cleanId), position: getPlayerPosition(players, cleanId)?.toUpperCase(), rosterPct };
+                return { id: cleanId, name: getPlayerName(players, cleanId), position: getPlayerPosition(players, cleanId)?.toUpperCase(), team: players.get(cleanId)?.team, rosterPct };
               });
               const f2Names = f2Gave.map(id => {
                 const cleanId = id.trim();
@@ -91,7 +91,7 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
                   return { id: cleanId, name: formatDraftPick(cleanId, currentYear), position: 'PICK' };
                 }
                 const rosterPct = players.get(cleanId)?.rosterPct;
-                return { id: cleanId, name: getPlayerName(players, cleanId), position: getPlayerPosition(players, cleanId)?.toUpperCase(), rosterPct };
+                return { id: cleanId, name: getPlayerName(players, cleanId), position: getPlayerPosition(players, cleanId)?.toUpperCase(), team: players.get(cleanId)?.team, rosterPct };
               });
 
               const formattedTime = t.timestamp ? formatTimestamp(t.timestamp) : '';
@@ -134,11 +134,11 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
               
               const addedPlayers = added.map(id => {
                 const rosterPct = players.get(id)?.rosterPct;
-                return { id, name: getPlayerName(players, id), position: getPlayerPosition(players, id)?.toUpperCase(), rosterPct };
+                return { id, name: getPlayerName(players, id), position: getPlayerPosition(players, id)?.toUpperCase(), team: players.get(id)?.team, rosterPct };
               });
               const droppedPlayers = dropped.map(id => {
                 const rosterPct = players.get(id)?.rosterPct;
-                return { id, name: getPlayerName(players, id), position: getPlayerPosition(players, id)?.toUpperCase(), rosterPct };
+                return { id, name: getPlayerName(players, id), position: getPlayerPosition(players, id)?.toUpperCase(), team: players.get(id)?.team, rosterPct };
               });
               
               const formattedTime = t.timestamp ? formatTimestamp(t.timestamp) : '';
@@ -207,6 +207,7 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
                 id: playerId,
                 name: getPlayerName(players, playerId),
                 position: getPlayerPosition(players, playerId)?.toUpperCase(),
+                team: players.get(playerId)?.team,
                 rosterPct: players.get(playerId)?.rosterPct
               };
 
@@ -214,6 +215,7 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
                 id: dropPlayerId,
                 name: getPlayerName(players, dropPlayerId),
                 position: getPlayerPosition(players, dropPlayerId)?.toUpperCase(),
+                team: players.get(dropPlayerId)?.team,
                 rosterPct: players.get(dropPlayerId)?.rosterPct
               } : undefined;
 

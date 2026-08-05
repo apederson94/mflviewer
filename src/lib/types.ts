@@ -24,6 +24,7 @@ export interface TransactionPlayer {
   id: string;
   name: string;
   position?: string;
+  team?: string;
   rosterPct?: number;
 }
 
