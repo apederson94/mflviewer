@@ -872,6 +872,7 @@
   .login-form input:focus {
     outline: none;
     background: var(--highlight);
+    color: var(--on-highlight);
     box-shadow: var(--shadow-sm);
   }
 
@@ -1017,7 +1018,7 @@
   }
 
   .league-checkbox-label input[type="checkbox"] {
-    accent-color: var(--text-primary);
+    accent-color: var(--highlight);
     width: 1rem;
     height: 1rem;
     cursor: pointer;
@@ -1804,7 +1805,7 @@
     }
 
     .mobile-toolbar-trades input {
-      accent-color: var(--text-primary);
+      accent-color: var(--highlight);
       cursor: pointer;
       width: 1rem;
       height: 1rem;

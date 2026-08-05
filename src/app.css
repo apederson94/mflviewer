@@ -24,6 +24,7 @@ button, input, select {
 }
 
 :root {
+  color-scheme: light;
   --bg-primary: #f4f1ea;
   --bg-secondary: #ffffff;
   --bg-card: #ffffff;
@@ -82,21 +83,22 @@ button, input, select {
 }
 
 [data-theme="dark"] {
-  --bg-primary: #141311;
-  --bg-secondary: #1f1d1a;
-  --bg-card: #1f1d1a;
-  --bg-paper: #262421;
-  --border: #f4f1ea;
-  --accent: #f4f1ea;
+  color-scheme: dark;
+  --bg-primary: #161412;
+  --bg-secondary: #211d18;
+  --bg-card: #211d18;
+  --bg-paper: #2a2621;
+  --border: #4c463f;
+  --accent: #ece6da;
   --accent-hover: #ffffff;
-  --highlight: #ffde00;
-  --on-highlight: #111111;
-  --text-primary: #f4f1ea;
-  --text-secondary: #c9c5bb;
-  --text-muted: #8f8a80;
-  --error-bg: #ffde00;
-  --error-border: #f4f1ea;
-  --error-text: #111111;
+  --highlight: #ffb703;
+  --on-highlight: #1a1204;
+  --text-primary: #ece6da;
+  --text-secondary: #b7b0a3;
+  --text-muted: #8b857a;
+  --error-bg: #ffb703;
+  --error-border: #4c463f;
+  --error-text: #1a1204;
 
   --trade-color: #a78bfa;
   --waiver-color: #fb923c;
@@ -105,21 +107,21 @@ button, input, select {
   --system-color: #fbbf24;
   --drop-color: #f87171;
 
-  --type-trade-bg: rgba(167, 139, 250, 0.15);
-  --type-fa-bg: rgba(52, 211, 153, 0.15);
-  --type-waiver-bg: rgba(251, 146, 60, 0.15);
+  --type-trade-bg: rgba(167, 139, 250, 0.16);
+  --type-fa-bg: rgba(52, 211, 153, 0.16);
+  --type-waiver-bg: rgba(251, 146, 60, 0.16);
   --type-other-bg: var(--bg-paper);
 
-  --tint-green-bg: rgba(52, 211, 153, 0.15);
-  --tint-amber-bg: rgba(251, 191, 36, 0.15);
+  --tint-green-bg: rgba(52, 211, 153, 0.16);
+  --tint-amber-bg: rgba(255, 183, 3, 0.16);
   --tint-amber-text: #fbbf24;
 
-  --shadow-ink: #cbc6ba;
+  --shadow-ink: rgba(0, 0, 0, 0.6);
 
-  --tooltip-bg: #f4f1ea;
-  --tooltip-text: #111111;
-  --tooltip-title: #a16207;
-  --tooltip-sep: rgba(0, 0, 0, 0.15);
+  --tooltip-bg: #26211b;
+  --tooltip-text: #ece6da;
+  --tooltip-title: #ffb703;
+  --tooltip-sep: rgba(255, 255, 255, 0.12);
 
   --pos-qb-bg: rgba(167, 139, 250, 0.18); --pos-qb-text: #c4b5fd;
   --pos-rb-bg: rgba(52, 211, 153, 0.18); --pos-rb-text: #6ee7b7;
