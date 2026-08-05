@@ -6,6 +6,8 @@ import type {
   MFLTopOwnsResponse,
   MFLPendingWaiversResponse,
   MFLPendingWaiverRequest,
+  MFLFreeAgentsResponse,
+  MFLFreeAgentRaw,
   StoredLeague,
   MFLFranchise,
   MFLLeagueResponse,
@@ -253,7 +255,8 @@ export async function loadPlayerCache(cookie?: string): Promise<Map<string, Play
       players.forEach(player => {
         playerCacheMap.set(player.id, {
           name: player.name,
-          position: player.position
+          position: player.position,
+          team: player.team
         });
       });
     }
@@ -380,6 +383,23 @@ export async function getPendingWaivers(
     return requests ? toArray(requests) : [];
   } catch (error) {
     console.error(`Fetch pending waivers for league ${leagueId} failed: ${error}`);
+    throw error;
+  }
+}
+
+export async function getFreeAgents(
+  leagueId: string,
+  cookie?: string
+): Promise<MFLFreeAgentRaw[]> {
+  const baseUrl = await getBaseUrl();
+  const url = `${baseUrl}?TYPE=freeAgents&L=${leagueId}&JSON=1`;
+
+  try {
+    const response = await fetchJSON<MFLFreeAgentsResponse>(url, cookie);
+    const players = response.freeAgents?.leagueUnit?.player;
+    return players ? toArray(players) : [];
+  } catch (error) {
+    console.error(`Fetch free agents for league ${leagueId} failed: ${error}`);
     throw error;
   }
 }

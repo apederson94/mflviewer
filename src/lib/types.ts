@@ -6,6 +6,7 @@ export interface MFLLeague {
 export interface PlayerInfo {
   name: string;
   position: string;
+  team?: string;
   rosterPct?: number;
 }
 
@@ -88,12 +89,37 @@ export interface MFLPlayerDBEntry {
   id: string;
   name: string;
   position: string;
+  team?: string;
 }
 
 export interface MFLPlayersResponse {
   players: {
     player: MFLPlayerDBEntry[];
   };
+}
+
+export interface MFLFreeAgentRaw {
+  id: string;
+  status?: string;
+}
+
+export interface MFLFreeAgentsResponse {
+  freeAgents: {
+    leagueUnit: {
+      player: MFLFreeAgentRaw | MFLFreeAgentRaw[];
+      unit: string;
+    };
+  };
+}
+
+export interface MFLFreeAgent {
+  id: string;
+  name: string;
+  position?: string;
+  team?: string;
+  rosterPct?: number;
+  locked?: boolean;
+  availableIn: string[];
 }
 
 export interface StoredLeague {

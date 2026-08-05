@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getMyLeagues, getTransactions, getPendingWaivers, loadPlayerCache, getCurrentWeek, getCurrentYear, getPlayerName, getPlayerPosition, getLeagueFull, getFranchiseName, formatDraftPick, formatTimestamp, MFL_COOKIE_NAME } from '$lib/api';
-import type { MFLTransaction, MFLPendingWaiver, ParsedWaiverClaim } from '$lib/types';
+import { getMyLeagues, getTransactions, getPendingWaivers, getFreeAgents, loadPlayerCache, getCurrentWeek, getCurrentYear, getPlayerName, getPlayerPosition, getLeagueFull, getFranchiseName, formatDraftPick, formatTimestamp, MFL_COOKIE_NAME } from '$lib/api';
+import type { MFLTransaction, MFLPendingWaiver, MFLFreeAgent, ParsedWaiverClaim } from '$lib/types';
 
 function getTransactionDisplayName(type: string): string {
   switch (type) {
@@ -239,6 +239,56 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
 
         allEnriched.sort((a, b) => (b.maxRosterPct || 0) - (a.maxRosterPct || 0));
         return json({ pendingWaivers: allEnriched });
+      }
+
+      case 'freeAgents': {
+        if (!leagueId) {
+          return json({ error: 'League ID required' }, { status: 400 });
+        }
+        const leagueIds = leagueId.split(',').map(id => id.trim()).filter(Boolean);
+        const players = await loadPlayerCache(cookie);
+
+        const leagueResults = await Promise.all(leagueIds.map(async (lid) => {
+          try {
+            const freeAgents = await getFreeAgents(lid, cookie);
+            return { leagueId: lid, freeAgents };
+          } catch (e) {
+            console.error(`Failed to fetch free agents for league ${lid}:`, e);
+            return null;
+          }
+        }));
+
+        const unionMap = new Map<string, { id: string; locked: boolean; availableIn: string[] }>();
+        for (const result of leagueResults) {
+          if (!result) continue;
+          const { leagueId: lid, freeAgents } = result;
+          for (const fa of freeAgents) {
+            const existing = unionMap.get(fa.id);
+            if (existing) {
+              existing.locked = existing.locked || fa.status === 'locked';
+              existing.availableIn.push(lid);
+            } else {
+              unionMap.set(fa.id, { id: fa.id, locked: fa.status === 'locked', availableIn: [lid] });
+            }
+          }
+        }
+
+        const freeAgents: MFLFreeAgent[] = [...unionMap.values()].map(p => ({
+          id: p.id,
+          name: getPlayerName(players, p.id),
+          position: getPlayerPosition(players, p.id)?.toUpperCase(),
+          team: players.get(p.id)?.team,
+          rosterPct: players.get(p.id)?.rosterPct,
+          locked: p.locked,
+          availableIn: p.availableIn
+        }));
+
+        freeAgents.sort((a, b) => {
+          if (!!a.locked !== !!b.locked) return a.locked ? 1 : -1;
+          return (b.rosterPct || 0) - (a.rosterPct || 0);
+        });
+
+        return json({ freeAgents });
       }
 
       case 'players': {

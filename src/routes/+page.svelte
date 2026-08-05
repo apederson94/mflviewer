@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import type { PageData } from './$types';
-  import type { StoredLeague, MFLTransaction, MFLPendingWaiver } from '$lib';
+  import type { StoredLeague, MFLTransaction, MFLPendingWaiver, MFLFreeAgent } from '$lib';
 
   let { data }: { data: PageData } = $props();
 
@@ -21,11 +21,17 @@
   let showTrades = $state(false);
   let mobileFilterOpen = $state(false);
   let leagueSearch = $state('');
-  let activeTab = $state<'transactions' | 'waivers'>('transactions');
+  let activeTab = $state<'transactions' | 'waivers' | 'freeAgents'>('transactions');
   let pendingWaivers = $state<MFLPendingWaiver[]>([]);
   let waiverLoading = $state(false);
+  let freeAgents = $state<MFLFreeAgent[]>([]);
+  let freeAgentLoading = $state(false);
+  let faPosition = $state('ALL');
+  let faSearch = $state('');
+  let hideLocked = $state(false);
   let loadId = 0;
   let waiverLoadId = 0;
+  let freeAgentLoadId = 0;
 
   let filteredLeagues = $derived(
     leagueSearch
@@ -41,6 +47,83 @@
   );
 
   let selectedCount = $derived(selectedLeagueIds.size);
+
+  let totalLeagues = $derived(selectedLeagueIds.size);
+
+  const faPositions = ['ALL', 'QB', 'RB', 'WR', 'TE', 'K', 'DST', 'DT', 'DE', 'LB', 'CB', 'S'];
+
+  const NFL_TEAM_COLORS: Record<string, string> = {
+    ARI: '#97233F', AZN: '#97233F',
+    ATL: '#A71930',
+    BAL: '#241773',
+    BUF: '#00338D',
+    CAR: '#0085CA',
+    CHI: '#0B162A',
+    CIN: '#FB4F14',
+    CLE: '#311D00',
+    DAL: '#003594',
+    DEN: '#002244',
+    DET: '#0076B6',
+    GB: '#203731', GBP: '#203731',
+    HOU: '#03202F',
+    IND: '#002C5F',
+    JAC: '#006778', JAX: '#006778',
+    KC: '#E31837', KCC: '#E31837',
+    LAC: '#0080C6',
+    LAR: '#003594',
+    LV: '#A5ACAF', LVR: '#A5ACAF',
+    MIA: '#008E97',
+    MIN: '#4F2683',
+    NE: '#002244', NEP: '#002244',
+    NO: '#D3BC8D', NOS: '#D3BC8D',
+    NYG: '#0B2265',
+    NYJ: '#125740',
+    PHI: '#004C54',
+    PIT: '#FFB612',
+    SD: '#002244',
+    SF: '#AA0000', SFO: '#AA0000',
+    SEA: '#002244',
+    STL: '#002244',
+    TB: '#D50A0A', TBB: '#D50A0A',
+    TEN: '#0C2340',
+    WAS: '#773141', WSH: '#773141'
+  };
+
+  function getTeamColor(team: string): string {
+    return NFL_TEAM_COLORS[team.toUpperCase()] || '';
+  }
+
+  function contrastText(hex: string): string {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return lum > 0.6 ? '#000000' : '#ffffff';
+  }
+
+  let filteredFreeAgents = $derived(
+    freeAgents.filter(fa => {
+      const position = fa.position ?? 'UNK';
+      if (faPosition === 'DST') {
+        if (!['DST', 'DEF', 'DFL'].includes(position)) return false;
+      } else if (faPosition !== 'ALL' && position !== faPosition) {
+        return false;
+      }
+      if (faSearch && !fa.name.toLowerCase().includes(faSearch.toLowerCase())) return false;
+      if (hideLocked && fa.locked) return false;
+      return true;
+    })
+  );
+
+  function reloadForTab(ids: string[]) {
+    if (activeTab === 'transactions') {
+      loadTransactions(ids);
+    } else if (activeTab === 'waivers') {
+      loadPendingWaivers(ids);
+    } else {
+      loadFreeAgents(ids);
+    }
+  }
 
   function toggleMobileFilter() {
     mobileFilterOpen = !mobileFilterOpen;
@@ -93,6 +176,31 @@
       pendingWaivers = [];
     } finally {
       if (thisLoad === waiverLoadId) waiverLoading = false;
+    }
+  }
+
+  async function loadFreeAgents(leagueIds: string[]) {
+    if (leagueIds.length === 0) {
+      freeAgents = [];
+      return;
+    }
+    const thisLoad = ++freeAgentLoadId;
+    freeAgentLoading = true;
+    error = null;
+    try {
+      const res = await fetch(`/api/mfl?type=freeAgents&league=${leagueIds.join(',')}`);
+      if (thisLoad !== freeAgentLoadId) return;
+      const data = await res.json();
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      freeAgents = data.freeAgents || [];
+    } catch (err) {
+      if (thisLoad !== freeAgentLoadId) return;
+      error = err instanceof Error ? err.message : 'Failed to load free agents';
+      freeAgents = [];
+    } finally {
+      if (thisLoad === freeAgentLoadId) freeAgentLoading = false;
     }
   }
 
@@ -159,46 +267,26 @@
       next.add(leagueId);
     }
     selectedLeagueIds = next;
-    const ids = Array.from(next);
-    if (activeTab === 'transactions') {
-      loadTransactions(ids);
-    } else {
-      loadPendingWaivers(ids);
-    }
+    reloadForTab(Array.from(next));
   }
 
   function handleSelectAll() {
     const next = new Set(selectedLeagueIds);
     for (const l of filteredLeagues) next.add(l.id);
     selectedLeagueIds = next;
-    const ids = Array.from(next);
-    if (activeTab === 'transactions') {
-      loadTransactions(ids);
-    } else {
-      loadPendingWaivers(ids);
-    }
+    reloadForTab(Array.from(next));
   }
 
   function handleSelectNone() {
     const next = new Set(selectedLeagueIds);
     for (const l of filteredLeagues) next.delete(l.id);
     selectedLeagueIds = next;
-    const ids = Array.from(next);
-    if (activeTab === 'transactions') {
-      loadTransactions(ids);
-    } else {
-      loadPendingWaivers(ids);
-    }
+    reloadForTab(Array.from(next));
   }
 
   onMount(() => {
     if (isLoggedIn && selectedLeagueIds.size > 0) {
-      const ids = Array.from(selectedLeagueIds);
-      if (activeTab === 'transactions') {
-        loadTransactions(ids);
-      } else {
-        loadPendingWaivers(ids);
-      }
+      reloadForTab(Array.from(selectedLeagueIds));
     }
   });
 
@@ -323,6 +411,26 @@
               Show Trades
             </label>
           {/if}
+          {#if activeTab === 'freeAgents'}
+            <div class="sidebar-filter-group">
+              <label for="fa-position-select" class="sidebar-label">Position</label>
+              <select id="fa-position-select" bind:value={faPosition}>
+                {#each faPositions as pos}
+                  <option value={pos}>{pos === 'ALL' ? 'All' : pos}</option>
+                {/each}
+              </select>
+            </div>
+            <input
+              class="fa-search"
+              type="text"
+              placeholder="Search players..."
+              bind:value={faSearch}
+            />
+            <label class="sidebar-trade-toggle">
+              <input type="checkbox" bind:checked={hideLocked} />
+              Hide locked
+            </label>
+          {/if}
         {/if}
         
         {#if leagues.length === 0 && isLoggedIn && !data.error}
@@ -364,6 +472,13 @@
             {#if pendingWaivers.length > 0}
               <span class="tab-count">{pendingWaivers.length}</span>
             {/if}
+          </button>
+          <button
+            class="tab-button"
+            class:active={activeTab === 'freeAgents'}
+            onclick={() => { activeTab = 'freeAgents'; error = null; loadFreeAgents(Array.from(selectedLeagueIds)); }}
+          >
+            Free Agents
           </button>
           {#if activeTab === 'waivers' && !waiverLoading && pendingWaivers.length > 0}
             <button
@@ -611,6 +726,63 @@
           {:else}
             <div class="no-data">
               No pending waivers found — try selecting more leagues
+            </div>
+          {/if}
+
+        {:else if activeTab === 'freeAgents'}
+          <div class="mobile-toolbar">
+            <select class="mobile-toolbar-select" bind:value={faPosition}>
+              {#each faPositions as pos}
+                <option value={pos}>{pos === 'ALL' ? 'All' : pos}</option>
+              {/each}
+            </select>
+            <input
+              class="fa-mobile-search"
+              type="text"
+              placeholder="Search..."
+              bind:value={faSearch}
+            />
+          </div>
+          {#if freeAgentLoading}
+            <div class="loading">Loading free agents...</div>
+          {:else if filteredFreeAgents.length > 0}
+            <div class="fa-grid">
+              {#each filteredFreeAgents as fa (fa.id)}
+                <div class="fa-card" class:locked={fa.locked}>
+                  <div class="fa-card-top">
+                    {#if fa.position}
+                      <span class="position-badge" data-position={fa.position}>{fa.position}</span>
+                    {/if}
+                    <span class="player-name">{fa.name}</span>
+                  </div>
+                  <div class="fa-card-meta">
+                    {#if fa.team}
+                      {@const teamColor = getTeamColor(fa.team)}
+                      <span
+                        class="fa-team"
+                        style={teamColor ? `--team-bg:${teamColor};--team-text:${contrastText(teamColor)}` : ''}
+                      >{fa.team}</span>
+                    {/if}
+                    {#if fa.rosterPct != null}
+                      <span class="roster-badge">{fa.rosterPct.toFixed(1)}%</span>
+                    {/if}
+                    {#if fa.locked}
+                      <span class="fa-lock">Locked</span>
+                    {/if}
+                    {#if fa.availableIn.length < totalLeagues}
+                      <span class="fa-avail">FA {fa.availableIn.length}/{totalLeagues}</span>
+                    {/if}
+                  </div>
+                </div>
+              {/each}
+            </div>
+          {:else if freeAgents.length === 0}
+            <div class="no-data">
+              No free agents found — try selecting more leagues
+            </div>
+          {:else}
+            <div class="no-data">
+              No free agents match your filters
             </div>
           {/if}
         {/if}
@@ -1937,5 +2109,170 @@
     font-size: 0.85rem;
     color: var(--text-secondary);
     white-space: pre-wrap;
+  }
+
+  .sidebar-filter-group {
+    margin-bottom: 0.5rem;
+  }
+
+  .sidebar-filter-group select {
+    width: 100%;
+    padding: 0.4rem 0.5rem;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+
+  .sidebar-filter-group select:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  .fa-search {
+    width: 100%;
+    padding: 0.5rem;
+    margin-bottom: 0.5rem;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.85rem;
+    box-sizing: border-box;
+  }
+
+  .fa-search:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  .fa-search::placeholder {
+    color: var(--text-muted);
+  }
+
+  .fa-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 0.5rem;
+  }
+
+  .fa-card {
+    background: linear-gradient(135deg, var(--bg-secondary) 0%, #1a2536 100%);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.6rem;
+    box-shadow: var(--card-shadow);
+    transition: all 0.2s ease;
+    animation: fadeInUp 0.3s ease;
+    position: relative;
+  }
+
+  .fa-card::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--free-agent-color);
+    border-radius: 8px 0 0 8px;
+  }
+
+  .fa-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--card-shadow-hover);
+    border-color: var(--text-muted);
+  }
+
+  .fa-card.locked {
+    opacity: 0.55;
+    filter: saturate(0.7);
+  }
+
+  .fa-card-top {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0.4rem;
+    min-width: 0;
+  }
+
+  .fa-card-top .player-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 600;
+  }
+
+  .fa-card-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+
+  .fa-team {
+    font-size: 0.75rem;
+    font-weight: 700;
+    border-radius: 3px;
+    padding: 0.075rem 0.3rem;
+    white-space: nowrap;
+    background: var(--team-bg, rgba(100, 116, 139, 0.2));
+    color: var(--team-text, var(--text-secondary));
+    border: 1px solid var(--team-bg, var(--border));
+  }
+
+  .fa-lock {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #fbbf24;
+    background: rgba(251, 191, 36, 0.15);
+    border: 1px solid rgba(251, 191, 36, 0.3);
+    border-radius: 3px;
+    padding: 0.075rem 0.3rem;
+    white-space: nowrap;
+  }
+
+  .fa-avail {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--free-agent-color);
+    background: rgba(52, 211, 153, 0.15);
+    border: 1px solid rgba(52, 211, 153, 0.3);
+    border-radius: 3px;
+    padding: 0.075rem 0.3rem;
+    white-space: nowrap;
+  }
+
+  .fa-mobile-search {
+    flex: 1;
+    min-width: 0;
+    padding: 0.3rem 0.4rem;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.8rem;
+  }
+
+  .fa-mobile-search:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  .fa-mobile-search::placeholder {
+    color: var(--text-muted);
+  }
+
+  @media (max-width: 768px) {
+    .fa-card::before {
+      width: 100%;
+      height: 3px;
+      border-radius: 12px 12px 0 0;
+    }
   }
 </style>
