@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getMyLeagues, getTransactions, getPendingWaivers, getFreeAgents, loadPlayerCache, getCurrentWeek, getCurrentYear, getPlayerName, getPlayerPosition, getLeagueFull, getFranchiseName, formatDraftPick, formatTimestamp, MFL_COOKIE_NAME } from '$lib/api';
 import type { MFLTransaction, MFLPendingWaiver, MFLFreeAgent, ParsedWaiverClaim } from '$lib/types';
+import { warmPlayerImages } from '$lib/playerImages';
 
 function getTransactionDisplayName(type: string): string {
   switch (type) {
@@ -287,6 +288,10 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
           if (!!a.locked !== !!b.locked) return a.locked ? 1 : -1;
           return (b.rosterPct || 0) - (a.rosterPct || 0);
         });
+
+        warmPlayerImages(freeAgents.map(fa => fa.id), 6).catch(err =>
+          console.error('Free agent image warm failed:', err)
+        );
 
         return json({ freeAgents });
       }

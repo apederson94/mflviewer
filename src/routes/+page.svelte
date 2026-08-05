@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import type { PageData } from './$types';
   import type { StoredLeague, MFLTransaction, MFLPendingWaiver, MFLFreeAgent } from '$lib';
+  import PlayerAvatar from '$lib/PlayerAvatar.svelte';
 
   let { data }: { data: PageData } = $props();
 
@@ -543,6 +544,7 @@
                             <div class="player-list">
                               {#each transaction.tradeReceives as player}
                                 <div class="player-item">
+                                  <PlayerAvatar id={player.id} position={player.position} size="sm" />
                                   {#if player.position}
                                     <span class="position-badge" data-position={player.position}>{player.position}</span>
                                   {/if}
@@ -563,6 +565,7 @@
                             <div class="player-list">
                               {#each transaction.tradeGives as player}
                                 <div class="player-item">
+                                  <PlayerAvatar id={player.id} position={player.position} size="sm" />
                                   {#if player.position}
                                     <span class="position-badge" data-position={player.position}>{player.position}</span>
                                   {/if}
@@ -592,6 +595,7 @@
                             <div class="player-list">
                               {#each transaction.addedPlayers as player}
                                 <span class="player-item">
+                                  <PlayerAvatar id={player.id} position={player.position} size="sm" />
                                   {#if player.position}
                                     <span class="position-badge" data-position={player.position}>{player.position}</span>
                                   {/if}
@@ -612,6 +616,7 @@
                             <div class="player-list">
                               {#each transaction.droppedPlayers as player}
                                 <span class="player-item">
+                                  <PlayerAvatar id={player.id} position={player.position} size="sm" />
                                   {#if player.position}
                                     <span class="position-badge" data-position={player.position}>{player.position}</span>
                                   {/if}
@@ -676,6 +681,7 @@
                               <span class="priority-label">Add</span>
                               {#if claim.addedPlayer}
                                 <div class="player-item">
+                                  <PlayerAvatar id={claim.addedPlayer.id} position={claim.addedPlayer.position} size="sm" />
                                   {#if claim.addedPlayer.position}
                                     <span class="position-badge" data-position={claim.addedPlayer.position}>{claim.addedPlayer.position}</span>
                                   {/if}
@@ -691,6 +697,7 @@
                               <span class="priority-label">Drop</span>
                               {#if claim.droppedPlayer}
                                 <div class="player-item">
+                                  <PlayerAvatar id={claim.droppedPlayer.id} position={claim.droppedPlayer.position} size="sm" />
                                   {#if claim.droppedPlayer.position}
                                     <span class="position-badge" data-position={claim.droppedPlayer.position}>{claim.droppedPlayer.position}</span>
                                   {/if}
@@ -750,6 +757,7 @@
               {#each filteredFreeAgents as fa (fa.id)}
                 <div class="fa-card" class:locked={fa.locked}>
                   <div class="fa-card-top">
+                    <PlayerAvatar id={fa.id} position={fa.position} size="md" />
                     {#if fa.position}
                       <span class="position-badge" data-position={fa.position}>{fa.position}</span>
                     {/if}

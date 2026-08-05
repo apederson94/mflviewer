@@ -15,6 +15,7 @@ import type {
 } from './types';
 
 import type { MFLLoginResponse } from './types';
+import { resetImageCacheIfStale } from './playerImages';
 
 export const MFL_COOKIE_NAME = 'mfl_cookie';
 
@@ -275,6 +276,8 @@ export async function loadPlayerCache(cookie?: string): Promise<Map<string, Play
       players: playerCacheMap,
       timestamp: Date.now()
     };
+
+    resetImageCacheIfStale();
     
     console.log(`Fetched ${playerCacheMap.size} players, payload bytes: ${payloadSize}, success: true`);
   } catch (error) {
@@ -282,6 +285,20 @@ export async function loadPlayerCache(cookie?: string): Promise<Map<string, Play
   }
   
   return playerCacheMap;
+}
+
+export async function getTopRosteredPlayerIds(count = 1000): Promise<string[]> {
+  const baseUrl = await getBaseUrl();
+  const ownsUrl = `${baseUrl}?TYPE=topOwns&JSON=1&COUNT=10000`;
+
+  try {
+    const response = await fetchJSON<MFLTopOwnsResponse>(ownsUrl);
+    const owns = response.topOwns?.player ? toArray(response.topOwns.player) : [];
+    return owns.slice(0, count).map(p => p.id);
+  } catch (error) {
+    console.error(`Fetch top owns failed: ${error}`);
+    return [];
+  }
 }
 
 export function getPlayerName(playerCache: Map<string, PlayerInfo>, playerId: string): string {
