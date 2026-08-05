@@ -102,17 +102,17 @@ button, input, select {
 
   --trade-color: #a78bfa;
   --waiver-color: #fb923c;
-  --free-agent-color: #34d399;
+  --free-agent-color: #6cb290;
   --franchise-color: #60a5fa;
   --system-color: #fbbf24;
   --drop-color: #f87171;
 
   --type-trade-bg: rgba(167, 139, 250, 0.16);
-  --type-fa-bg: rgba(52, 211, 153, 0.16);
+  --type-fa-bg: rgba(108, 178, 144, 0.18);
   --type-waiver-bg: rgba(251, 146, 60, 0.16);
   --type-other-bg: var(--bg-paper);
 
-  --tint-green-bg: rgba(52, 211, 153, 0.16);
+  --tint-green-bg: rgba(108, 178, 144, 0.18);
   --tint-amber-bg: rgba(255, 183, 3, 0.16);
   --tint-amber-text: #fbbf24;
 
@@ -124,7 +124,7 @@ button, input, select {
   --tooltip-sep: rgba(255, 255, 255, 0.12);
 
   --pos-qb-bg: rgba(167, 139, 250, 0.18); --pos-qb-text: #c4b5fd;
-  --pos-rb-bg: rgba(52, 211, 153, 0.18); --pos-rb-text: #6ee7b7;
+  --pos-rb-bg: rgba(108, 178, 144, 0.20); --pos-rb-text: #93c9ae;
   --pos-wr-bg: rgba(251, 146, 60, 0.18); --pos-wr-text: #fdba74;
   --pos-te-bg: rgba(96, 165, 250, 0.18); --pos-te-text: #93c5fd;
   --pos-k-bg: rgba(244, 114, 182, 0.18); --pos-k-text: #f9a8d4;
