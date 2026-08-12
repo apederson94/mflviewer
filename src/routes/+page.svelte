@@ -1,10 +1,11 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import type { PageData } from './$types';
-  import type { StoredLeague, MFLTransaction, MFLPendingWaiver, MFLFreeAgent } from '$lib';
+  import type { StoredLeague, MFLTransaction, MFLPendingWaiver, MFLFreeAgent, ProfilePlayer } from '$lib';
   import PlayerAvatar from '$lib/PlayerAvatar.svelte';
   import TeamChip from '$lib/TeamChip.svelte';
   import PlayerRow from '$lib/PlayerRow.svelte';
+  import PlayerProfileModal from '$lib/PlayerProfileModal.svelte';
 
   let { data }: { data: PageData } = $props();
 
@@ -35,6 +36,16 @@
   let loadId = 0;
   let waiverLoadId = 0;
   let freeAgentLoadId = 0;
+
+  let profilePlayer = $state<ProfilePlayer | null>(null);
+
+  function openProfile(player: ProfilePlayer) {
+    profilePlayer = player;
+  }
+
+  function closeProfile() {
+    profilePlayer = null;
+  }
 
   let filteredLeagues = $derived(
     leagueSearch
@@ -536,7 +547,7 @@
                           {#if transaction.tradeReceives?.length}
                             <div class="player-list">
                               {#each transaction.tradeReceives as player}
-                                <PlayerRow id={player.id} name={player.name} position={player.position} team={player.team} rosterPct={player.rosterPct} />
+                                <PlayerRow id={player.id} name={player.name} position={player.position} team={player.team} rosterPct={player.rosterPct} onSelect={openProfile} />
                               {/each}
                             </div>
                           {:else}
@@ -550,7 +561,7 @@
                           {#if transaction.tradeGives?.length}
                             <div class="player-list">
                               {#each transaction.tradeGives as player}
-                                <PlayerRow id={player.id} name={player.name} position={player.position} team={player.team} rosterPct={player.rosterPct} />
+                                <PlayerRow id={player.id} name={player.name} position={player.position} team={player.team} rosterPct={player.rosterPct} onSelect={openProfile} />
                               {/each}
                             </div>
                           {:else}
@@ -573,7 +584,7 @@
                           {#if transaction.addedPlayers?.length}
                             <div class="player-list">
                               {#each transaction.addedPlayers as player}
-                                <PlayerRow id={player.id} name={player.name} position={player.position} team={player.team} rosterPct={player.rosterPct} />
+                                <PlayerRow id={player.id} name={player.name} position={player.position} team={player.team} rosterPct={player.rosterPct} onSelect={openProfile} />
                               {/each}
                             </div>
                           {:else}
@@ -587,7 +598,7 @@
                           {#if transaction.droppedPlayers?.length}
                             <div class="player-list">
                               {#each transaction.droppedPlayers as player}
-                                <PlayerRow id={player.id} name={player.name} position={player.position} team={player.team} rosterPct={player.rosterPct} />
+                                <PlayerRow id={player.id} name={player.name} position={player.position} team={player.team} rosterPct={player.rosterPct} onSelect={openProfile} />
                               {/each}
                             </div>
                           {:else}
@@ -645,14 +656,14 @@
                             <div class="priority-row">
                               <span class="priority-label">Add</span>
                               {#if claim.addedPlayer}
-                                <PlayerRow id={claim.addedPlayer.id} name={claim.addedPlayer.name} position={claim.addedPlayer.position} team={claim.addedPlayer.team} rosterPct={claim.addedPlayer.rosterPct} />
+                                <PlayerRow id={claim.addedPlayer.id} name={claim.addedPlayer.name} position={claim.addedPlayer.position} team={claim.addedPlayer.team} rosterPct={claim.addedPlayer.rosterPct} onSelect={openProfile} />
                               {/if}
                               <span class="priority-bid">${claim.bid}</span>
                             </div>
                             <div class="priority-row">
                               <span class="priority-label">Drop</span>
                               {#if claim.droppedPlayer}
-                                <PlayerRow id={claim.droppedPlayer.id} name={claim.droppedPlayer.name} position={claim.droppedPlayer.position} team={claim.droppedPlayer.team} rosterPct={claim.droppedPlayer.rosterPct} />
+                                <PlayerRow id={claim.droppedPlayer.id} name={claim.droppedPlayer.name} position={claim.droppedPlayer.position} team={claim.droppedPlayer.team} rosterPct={claim.droppedPlayer.rosterPct} onSelect={openProfile} />
                               {:else}
                                 <span class="no-drop">None</span>
                               {/if}
@@ -702,7 +713,20 @@
           {:else if filteredFreeAgents.length > 0}
             <div class="fa-grid">
               {#each filteredFreeAgents as fa (fa.id)}
-                <div class="fa-card" class:locked={fa.locked}>
+                <div
+                  class="fa-card"
+                  class:locked={fa.locked}
+                  role="button"
+                  tabindex="0"
+                  aria-label={`View profile for ${fa.name}`}
+                  onclick={() => openProfile({ id: fa.id, name: fa.name, position: fa.position, team: fa.team, rosterPct: fa.rosterPct, availableIn: fa.availableIn })}
+                  onkeydown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      openProfile({ id: fa.id, name: fa.name, position: fa.position, team: fa.team, rosterPct: fa.rosterPct, availableIn: fa.availableIn });
+                    }
+                  }}
+                >
                   <div class="fa-card-top">
                     <PlayerAvatar id={fa.id} position={fa.position} size="md" />
                     {#if fa.position}
@@ -765,6 +789,8 @@
       </ul>
     </div>
   {/if}
+
+  <PlayerProfileModal player={profilePlayer} onclose={closeProfile} />
 </div>
 
 <style>
@@ -2173,6 +2199,7 @@
     transition: all 0.1s ease;
     animation: fadeInUp 0.25s ease;
     position: relative;
+    cursor: pointer;
   }
 
   .fa-card::before {
@@ -2188,6 +2215,12 @@
   .fa-card:hover {
     transform: translate(-2px, -2px);
     box-shadow: var(--card-shadow-hover);
+  }
+
+  .fa-card:focus-visible {
+    outline: 2px solid var(--highlight);
+    outline-offset: 2px;
+    cursor: pointer;
   }
 
   .fa-card.locked {

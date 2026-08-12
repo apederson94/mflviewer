@@ -182,3 +182,32 @@ export interface MFLPendingWaiver {
   leagueName?: string;
   commentsFormatted?: string;
 }
+
+export interface MFLPlayerProfile {
+  name: string;
+  id: string;
+  player: {
+    id: string;
+    dob?: string;
+    age?: string;
+    height?: string;
+    weight?: string;
+    adp?: string;
+  };
+  news?: Record<string, unknown>;
+}
+
+export interface MFLPlayerProfileResponse {
+  playerProfile: MFLPlayerProfile;
+  version: string;
+  encoding: string;
+}
+
+export interface ProfilePlayer {
+  id: string;
+  name: string;
+  position?: string;
+  team?: string;
+  rosterPct?: number;
+  availableIn?: string[];
+}
