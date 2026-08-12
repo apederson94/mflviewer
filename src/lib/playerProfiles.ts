@@ -1,4 +1,4 @@
-import { fetchJSON, getBaseUrl } from './api';
+import { fetchJSON, getBaseUrl, loadPlayerCache } from './api';
 import type { MFLPlayerProfile } from './types';
 
 const profileCache = new Map<string, MFLPlayerProfile>();
@@ -33,8 +33,15 @@ async function fetchProfile(id: string): Promise<MFLPlayerProfile | null> {
     missingPlayers.add(id);
     return null;
   }
-  profileCache.set(id, response.playerProfile);
-  return response.playerProfile;
+
+  const profile = response.playerProfile;
+  const adp = (await loadPlayerCache()).get(id)?.adp;
+  if (adp) {
+    profile.player.adp = adp;
+  }
+
+  profileCache.set(id, profile);
+  return profile;
 }
 
 export async function getPlayerProfile(id: string): Promise<MFLPlayerProfile | null> {

@@ -11,7 +11,8 @@ import type {
   StoredLeague,
   MFLFranchise,
   MFLLeagueResponse,
-  PlayerInfo
+  MFLAdpResponse,
+  PlayerData
 } from './types';
 
 import type { MFLLoginResponse } from './types';
@@ -40,7 +41,7 @@ const leagueFullCache = new Map<string, LeagueFullCacheEntry>();
 const LEAGUE_CACHE_TTL_MS = 60 * 60 * 1000;
 
 interface PlayerCache {
-  players: Map<string, PlayerInfo>;
+  players: Map<string, PlayerData>;
   timestamp: number;
 }
 
@@ -256,60 +257,87 @@ console.error(`Fetch full league ${leagueId} failed: ${error}`);
   }
 }
 
-export async function loadPlayerCache(cookie?: string): Promise<Map<string, PlayerInfo>> {
+let playerCachePromise: Promise<Map<string, PlayerData>> | null = null;
+
+export async function loadPlayerCache(cookie?: string): Promise<Map<string, PlayerData>> {
   if (isPlayerCacheValid() && playerCache) {
     return playerCache.players;
   }
 
-  const baseUrl = await getBaseUrl();
-  const playersUrl = `${baseUrl}?TYPE=players&JSON=1`;
-  const ownsUrl = `${baseUrl}?TYPE=topOwns&JSON=1&COUNT=10000`;
-  const playerCacheMap = new Map<string, PlayerInfo>();
-  
-  console.log(`Fetching players, cookie present: ${!!cookie}`);
-  
-  try {
-    const [playerRes, ownsRes] = await Promise.all([
-      fetchJSON<MFLPlayersResponse>(playersUrl, cookie),
-      fetchJSON<MFLTopOwnsResponse>(ownsUrl),
-    ]);
-
-    const payloadSize = JSON.stringify(playerRes).length;
-
-    if (playerRes.players?.player) {
-      const players = toArray(playerRes.players.player);
-      players.forEach(player => {
-        playerCacheMap.set(player.id, {
-          name: player.name,
-          position: player.position,
-          team: player.team
-        });
-      });
-    }
-
-    if (ownsRes.topOwns?.player) {
-      const owns = toArray(ownsRes.topOwns.player);
-      owns.forEach(({ id, percent }) => {
-        const existing = playerCacheMap.get(id);
-        if (existing) {
-          existing.rosterPct = parseFloat(percent);
-        }
-      });
-    }
-
-    playerCache = {
-      players: playerCacheMap,
-      timestamp: Date.now()
-    };
-
-    resetImageCacheIfStale();
-    
-    console.log(`Fetched ${playerCacheMap.size} players, payload bytes: ${payloadSize}, success: true`);
-  } catch (error) {
-    console.error(`Fetch players failed: ${error}`);
+  if (playerCachePromise) {
+    return playerCachePromise;
   }
-  
-  return playerCacheMap;
+
+  playerCachePromise = (async () => {
+    const baseUrl = await getBaseUrl();
+    const playersUrl = `${baseUrl}?TYPE=players&JSON=1`;
+    const ownsUrl = `${baseUrl}?TYPE=topOwns&JSON=1&COUNT=10000`;
+    const adpUrl = `${baseUrl}?TYPE=adp&JSON=1`;
+    const playerCacheMap = new Map<string, PlayerData>();
+
+    console.log(`Fetching players, cookie present: ${!!cookie}`);
+
+    try {
+      const [playerRes, ownsRes, adpRes] = await Promise.allSettled([
+        fetchJSON<MFLPlayersResponse>(playersUrl, cookie),
+        fetchJSON<MFLTopOwnsResponse>(ownsUrl),
+        fetchJSON<MFLAdpResponse>(adpUrl),
+      ]);
+
+      if (playerRes.status === 'fulfilled' && playerRes.value.players?.player) {
+        const players = toArray(playerRes.value.players.player);
+        players.forEach(player => {
+          playerCacheMap.set(player.id, {
+            name: player.name,
+            position: player.position,
+            team: player.team
+          });
+        });
+      }
+
+      if (ownsRes.status === 'fulfilled' && ownsRes.value.topOwns?.player) {
+        const owns = toArray(ownsRes.value.topOwns.player);
+        owns.forEach(({ id, percent }) => {
+          const existing = playerCacheMap.get(id);
+          if (existing) {
+            existing.rosterPct = parseFloat(percent);
+          }
+        });
+      }
+
+      if (adpRes.status === 'fulfilled' && adpRes.value.adp?.player) {
+        const adp = toArray(adpRes.value.adp.player);
+        adp.forEach(({ id, averagePick }) => {
+          if (!averagePick) return;
+          const existing = playerCacheMap.get(id);
+          if (existing) {
+            existing.adp = averagePick;
+          } else {
+            playerCacheMap.set(id, { name: '', position: '', adp: averagePick });
+          }
+        });
+      }
+
+      const payloadSize = JSON.stringify(playerRes.status === 'fulfilled' ? playerRes.value : {}).length;
+
+      playerCache = {
+        players: playerCacheMap,
+        timestamp: Date.now()
+      };
+
+      resetImageCacheIfStale();
+
+      console.log(`Fetched ${playerCacheMap.size} players, payload bytes: ${payloadSize}, success: true`);
+    } catch (error) {
+      console.error(`Fetch players failed: ${error}`);
+    }
+
+    return playerCacheMap;
+  })().finally(() => {
+    playerCachePromise = null;
+  });
+
+  return playerCachePromise;
 }
 
 export async function getTopRosteredPlayerIds(count = 1000): Promise<string[]> {
@@ -326,12 +354,12 @@ export async function getTopRosteredPlayerIds(count = 1000): Promise<string[]> {
   }
 }
 
-export function getPlayerName(playerCache: Map<string, PlayerInfo>, playerId: string): string {
+export function getPlayerName(playerCache: Map<string, PlayerData>, playerId: string): string {
   const player = playerCache.get(playerId);
   return player?.name || `Unknown (${playerId})`;
 }
 
-export function getPlayerPosition(playerCache: Map<string, PlayerInfo>, playerId: string): string {
+export function getPlayerPosition(playerCache: Map<string, PlayerData>, playerId: string): string {
   const player = playerCache.get(playerId);
   return player?.position || 'UNK';
 }

@@ -81,6 +81,11 @@ button, input, select {
   --pos-unk-bg: #e7e5e4; --pos-unk-text: #44403c;
   --pos-pick-bg: #d6d3d1; --pos-pick-text: #292524;
   --pos-faab-bg: #fef9c3; --pos-faab-text: #854d0e;
+
+  --badge-font-size: 0.65rem;
+  --badge-font-weight: 900;
+  --badge-padding: 0.06rem 0.3rem;
+  --badge-letter-spacing: 0.5px;
 }
 
 [data-theme="dark"] {

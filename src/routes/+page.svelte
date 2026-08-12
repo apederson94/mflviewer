@@ -12,7 +12,7 @@
   let leagues = $state(data.leagues ?? []);
   let selectedLeagueIds = $state(new Set<string>(data.leagues?.map(l => l.id) ?? []));
   let transactions = $state<MFLTransaction[]>([]);
-  let playerCache = $state(new Map((data.players || []) as [string, { name: string; position: string; rosterPct?: number }][]));
+  let playerCache = $state(new Map((data.players || []) as [string, { name: string; position: string; rosterPct?: number; adp?: string }][]));
   let loading = $state(false);
   let error = $state<string | null>(null);
   let loginUsername = $state('');
@@ -23,6 +23,7 @@
   let year = $state(data.year);
   let selectedDays = $state('1');
   let showTrades = $state(false);
+  let txSort = $state<'roster' | 'adp'>('roster');
   let mobileFilterOpen = $state(false);
   let leagueSearch = $state('');
   let activeTab = $state<'transactions' | 'waivers' | 'freeAgents'>('transactions');
@@ -33,6 +34,7 @@
   let faPosition = $state('ALL');
   let faSearch = $state('');
   let hideLocked = $state(false);
+  let faSort = $state<'roster' | 'adp'>('roster');
   let loadId = 0;
   let waiverLoadId = 0;
   let freeAgentLoadId = 0;
@@ -67,17 +69,59 @@
   const faPositions = ['ALL', 'QB', 'RB', 'WR', 'TE', 'K', 'DST', 'DT', 'DE', 'LB', 'CB', 'S'];
 
   let filteredFreeAgents = $derived(
-    freeAgents.filter(fa => {
-      const position = fa.position ?? 'UNK';
-      if (faPosition === 'DST') {
-        if (!['DST', 'DEF', 'DFL'].includes(position)) return false;
-      } else if (faPosition !== 'ALL' && position !== faPosition) {
-        return false;
-      }
-      if (faSearch && !fa.name.toLowerCase().includes(faSearch.toLowerCase())) return false;
-      if (hideLocked && fa.locked) return false;
-      return true;
-    })
+    freeAgents
+      .filter(fa => {
+        const position = fa.position ?? 'UNK';
+        if (faPosition === 'DST') {
+          if (!['DST', 'DEF', 'DFL'].includes(position)) return false;
+        } else if (faPosition !== 'ALL' && position !== faPosition) {
+          return false;
+        }
+        if (faSearch && !fa.name.toLowerCase().includes(faSearch.toLowerCase())) return false;
+        if (hideLocked && fa.locked) return false;
+        return true;
+      })
+      .sort((a, b) => {
+        if (!!a.locked !== !!b.locked) return a.locked ? 1 : -1;
+        if (faSort === 'adp') {
+          const adpA = parseFloat(playerCache.get(a.id)?.adp ?? '');
+          const adpB = parseFloat(playerCache.get(b.id)?.adp ?? '');
+          const hasA = Number.isFinite(adpA);
+          const hasB = Number.isFinite(adpB);
+          if (hasA && hasB) return adpA - adpB;
+          if (hasA) return -1;
+          if (hasB) return 1;
+        }
+        return (b.rosterPct || 0) - (a.rosterPct || 0);
+      })
+  );
+
+  function transactionBestAdp(t: MFLTransaction): number | null {
+    const players = [
+      ...(t.tradeGives ?? []),
+      ...(t.tradeReceives ?? []),
+      ...(t.addedPlayers ?? []),
+      ...(t.droppedPlayers ?? [])
+    ];
+    let best: number | null = null;
+    for (const p of players) {
+      const adp = parseFloat(playerCache.get(p.id)?.adp ?? '');
+      if (Number.isFinite(adp) && (best === null || adp < best)) best = adp;
+    }
+    return best;
+  }
+
+  let sortedTransactions = $derived(
+    txSort === 'adp'
+      ? [...transactions].sort((a, b) => {
+          const adpA = transactionBestAdp(a);
+          const adpB = transactionBestAdp(b);
+          if (adpA !== null && adpB !== null) return adpA - adpB;
+          if (adpA !== null) return -1;
+          if (adpB !== null) return 1;
+          return (b.maxRosterPct || 0) - (a.maxRosterPct || 0);
+        })
+      : transactions
   );
 
   function reloadForTab(ids: string[]) {
@@ -360,16 +404,14 @@
       </div>
       <div class="sidebar-content">
         <h2>Filters</h2>
-        
+
         {#if data.error}
           <p class="error">{data.error}</p>
         {/if}
-        
+
         {#if !isLoggedIn}
           <p class="login-prompt">Log in to view your leagues</p>
-        {/if}
-        
-        {#if isLoggedIn}
+        {:else}
           <input
             class="league-search"
             type="text"
@@ -399,51 +441,62 @@
           {#if leagueSearch && filteredLeagues.length === 0}
             <p class="no-data">No leagues match your search</p>
           {/if}
-          <div class="sidebar-divider"></div>
-          {#if activeTab === 'transactions'}
-            <div class="sidebar-timeframe">
-              <label for="days-select-sidebar" class="sidebar-label">Timeframe</label>
-              <select id="days-select-sidebar" bind:value={selectedDays} onchange={() => loadTransactions(Array.from(selectedLeagueIds))}>
-                <option value="1">1 day</option>
-                <option value="7">7 days</option>
-                <option value="14">14 days</option>
-                <option value="30">30 days</option>
-                <option value="all">All (current year)</option>
-              </select>
-            </div>
-            <label class="sidebar-trade-toggle">
-              <input type="checkbox" bind:checked={showTrades} onchange={() => loadTransactions(Array.from(selectedLeagueIds))} />
-              Show Trades
-            </label>
+          {#if leagues.length === 0 && !data.error}
+            <p class="no-data">No leagues found</p>
           {/if}
-          {#if activeTab === 'freeAgents'}
-            <div class="sidebar-filter-group">
-              <label for="fa-position-select" class="sidebar-label">Position</label>
-              <select id="fa-position-select" bind:value={faPosition}>
-                {#each faPositions as pos}
-                  <option value={pos}>{pos === 'ALL' ? 'All' : pos}</option>
-                {/each}
-              </select>
-            </div>
-            <input
-              class="fa-search"
-              type="text"
-              placeholder="Search players..."
-              bind:value={faSearch}
-            />
-            <label class="sidebar-trade-toggle">
-              <input type="checkbox" bind:checked={hideLocked} />
-              Hide locked
-            </label>
+          {#if leagues.length > 0}
+            <div class="sidebar-divider"></div>
+            {#if activeTab === 'transactions'}
+              <div class="sidebar-timeframe">
+                <label for="days-select-sidebar" class="sidebar-label">Timeframe</label>
+                <select id="days-select-sidebar" bind:value={selectedDays} onchange={() => loadTransactions(Array.from(selectedLeagueIds))}>
+                  <option value="1">1 day</option>
+                  <option value="7">7 days</option>
+                  <option value="14">14 days</option>
+                  <option value="30">30 days</option>
+                  <option value="all">All (current year)</option>
+                </select>
+              </div>
+              <div class="sidebar-filter-group">
+                <label for="tx-sort-select" class="sidebar-label">Sort by</label>
+                <select id="tx-sort-select" bind:value={txSort}>
+                  <option value="roster">Roster %</option>
+                  <option value="adp">ADP</option>
+                </select>
+              </div>
+              <label class="sidebar-trade-toggle">
+                <input type="checkbox" bind:checked={showTrades} onchange={() => loadTransactions(Array.from(selectedLeagueIds))} />
+                Show Trades
+              </label>
+            {/if}
+            {#if activeTab === 'freeAgents'}
+              <input
+                class="fa-search"
+                type="text"
+                placeholder="Search players..."
+                bind:value={faSearch}
+              />
+              <div class="sidebar-filter-group">
+                <label for="fa-position-select" class="sidebar-label">Position</label>
+                <select id="fa-position-select" bind:value={faPosition}>
+                  {#each faPositions as pos}
+                    <option value={pos}>{pos === 'ALL' ? 'All' : pos}</option>
+                  {/each}
+                </select>
+              </div>
+              <div class="sidebar-filter-group">
+                <label for="fa-sort-select" class="sidebar-label">Sort by</label>
+                <select id="fa-sort-select" bind:value={faSort}>
+                  <option value="roster">Roster %</option>
+                  <option value="adp">ADP</option>
+                </select>
+              </div>
+              <label class="sidebar-trade-toggle">
+                <input type="checkbox" bind:checked={hideLocked} />
+                Hide locked
+              </label>
+            {/if}
           {/if}
-        {/if}
-        
-        {#if leagues.length === 0 && isLoggedIn && !data.error}
-          <p class="no-data">No leagues found</p>
-        {/if}
-        
-        {#if !isLoggedIn}
-          <p class="no-data">Log in to view your leagues</p>
         {/if}
       </div>
       
@@ -512,6 +565,10 @@
               <option value="30">30 days</option>
               <option value="all">All</option>
             </select>
+            <select class="mobile-toolbar-select" bind:value={txSort} aria-label="Sort transactions">
+              <option value="roster">Roster %</option>
+              <option value="adp">ADP</option>
+            </select>
             <label class="mobile-toolbar-trades">
               <input type="checkbox" bind:checked={showTrades} onchange={() => loadTransactions(Array.from(selectedLeagueIds))} />
               Trades
@@ -522,7 +579,7 @@
           {:else if transactions.length > 0}
             <div class="transactions-wrapper">
               <div class="transactions-list">
-              {#each transactions as transaction, i (`${transaction.id ?? i}-${transaction.week ?? i}-${transaction.type ?? i}`)}
+              {#each sortedTransactions as transaction, i (`${transaction.id ?? i}-${transaction.week ?? i}-${transaction.type ?? i}`)}
                 <div class="transaction-card" data-type={transaction.type}>
                   <div class="transaction-header">
                     <span class="transaction-type">{transaction.type}</span>
@@ -547,7 +604,7 @@
                           {#if transaction.tradeReceives?.length}
                             <div class="player-list">
                               {#each transaction.tradeReceives as player}
-                                <PlayerRow id={player.id} name={player.name} position={player.position} team={player.team} rosterPct={player.rosterPct} onSelect={openProfile} />
+                                <PlayerRow id={player.id} name={player.name} position={player.position} team={player.team} rosterPct={player.rosterPct} adp={playerCache.get(player.id)?.adp} onSelect={openProfile} />
                               {/each}
                             </div>
                           {:else}
@@ -561,7 +618,7 @@
                           {#if transaction.tradeGives?.length}
                             <div class="player-list">
                               {#each transaction.tradeGives as player}
-                                <PlayerRow id={player.id} name={player.name} position={player.position} team={player.team} rosterPct={player.rosterPct} onSelect={openProfile} />
+                                <PlayerRow id={player.id} name={player.name} position={player.position} team={player.team} rosterPct={player.rosterPct} adp={playerCache.get(player.id)?.adp} onSelect={openProfile} />
                               {/each}
                             </div>
                           {:else}
@@ -584,7 +641,7 @@
                           {#if transaction.addedPlayers?.length}
                             <div class="player-list">
                               {#each transaction.addedPlayers as player}
-                                <PlayerRow id={player.id} name={player.name} position={player.position} team={player.team} rosterPct={player.rosterPct} onSelect={openProfile} />
+                                <PlayerRow id={player.id} name={player.name} position={player.position} team={player.team} rosterPct={player.rosterPct} adp={playerCache.get(player.id)?.adp} onSelect={openProfile} />
                               {/each}
                             </div>
                           {:else}
@@ -598,7 +655,7 @@
                           {#if transaction.droppedPlayers?.length}
                             <div class="player-list">
                               {#each transaction.droppedPlayers as player}
-                                <PlayerRow id={player.id} name={player.name} position={player.position} team={player.team} rosterPct={player.rosterPct} onSelect={openProfile} />
+                                <PlayerRow id={player.id} name={player.name} position={player.position} team={player.team} rosterPct={player.rosterPct} adp={playerCache.get(player.id)?.adp} onSelect={openProfile} />
                               {/each}
                             </div>
                           {:else}
@@ -656,14 +713,14 @@
                             <div class="priority-row">
                               <span class="priority-label">Add</span>
                               {#if claim.addedPlayer}
-                                <PlayerRow id={claim.addedPlayer.id} name={claim.addedPlayer.name} position={claim.addedPlayer.position} team={claim.addedPlayer.team} rosterPct={claim.addedPlayer.rosterPct} onSelect={openProfile} />
+                                <PlayerRow id={claim.addedPlayer.id} name={claim.addedPlayer.name} position={claim.addedPlayer.position} team={claim.addedPlayer.team} rosterPct={claim.addedPlayer.rosterPct} adp={playerCache.get(claim.addedPlayer.id)?.adp} onSelect={openProfile} />
                               {/if}
                               <span class="priority-bid">${claim.bid}</span>
                             </div>
                             <div class="priority-row">
                               <span class="priority-label">Drop</span>
                               {#if claim.droppedPlayer}
-                                <PlayerRow id={claim.droppedPlayer.id} name={claim.droppedPlayer.name} position={claim.droppedPlayer.position} team={claim.droppedPlayer.team} rosterPct={claim.droppedPlayer.rosterPct} onSelect={openProfile} />
+                                <PlayerRow id={claim.droppedPlayer.id} name={claim.droppedPlayer.name} position={claim.droppedPlayer.position} team={claim.droppedPlayer.team} rosterPct={claim.droppedPlayer.rosterPct} adp={playerCache.get(claim.droppedPlayer.id)?.adp} onSelect={openProfile} />
                               {:else}
                                 <span class="no-drop">None</span>
                               {/if}
@@ -738,6 +795,9 @@
                     <TeamChip team={fa.team} />
                     {#if fa.rosterPct != null}
                       <span class="roster-badge">{fa.rosterPct.toFixed(1)}%</span>
+                    {/if}
+                    {#if playerCache.get(fa.id)?.adp}
+                      <span class="adp-badge">ADP {playerCache.get(fa.id)?.adp}</span>
                     {/if}
                     {#if fa.locked}
                       <span class="fa-lock">Locked</span>
@@ -1282,16 +1342,29 @@
   }
 
   :global(.roster-badge) {
-    font-size: 0.65rem;
-    font-weight: 900;
+    font-size: var(--badge-font-size);
+    font-weight: var(--badge-font-weight);
     color: var(--text-primary);
     background: var(--bg-secondary);
     border: 1px solid var(--border);
     border-radius: 0;
-    padding: 0.05rem 0.3rem;
+    padding: var(--badge-padding);
     white-space: nowrap;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: var(--badge-letter-spacing);
+  }
+
+  :global(.adp-badge) {
+    font-size: var(--badge-font-size);
+    font-weight: var(--badge-font-weight);
+    color: var(--text-primary);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 0;
+    padding: var(--badge-padding);
+    white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: var(--badge-letter-spacing);
   }
 
   .transactions-wrapper {
@@ -1559,12 +1632,12 @@
   }
 
   :global(.position-badge) {
-    font-size: 0.6rem;
-    font-weight: 900;
-    padding: 0.08rem 0.3rem;
+    font-size: var(--badge-font-size);
+    font-weight: var(--badge-font-weight);
+    padding: var(--badge-padding);
     border-radius: 0;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: var(--badge-letter-spacing);
     flex-shrink: 0;
     border: 1px solid var(--border);
   }
@@ -1648,10 +1721,11 @@
     background: var(--type-waiver-bg);
     border: 1px solid var(--border);
     border-radius: 0;
-    padding: 0.1rem 0.4rem;
-    font-weight: 900;
+    padding: var(--badge-padding);
+    font-weight: var(--badge-font-weight);
     text-transform: uppercase;
-    font-size: 0.8rem;
+    font-size: var(--badge-font-size);
+    letter-spacing: var(--badge-letter-spacing);
   }
 
   .tx-timestamp {
@@ -2053,13 +2127,14 @@
   }
 
   .priority-badge {
-    font-size: 0.7rem;
-    font-weight: 900;
-    padding: 0.15rem 0.4rem;
+    font-size: var(--badge-font-size);
+    font-weight: var(--badge-font-weight);
+    padding: var(--badge-padding);
     border-radius: 0;
     background: var(--highlight);
     color: var(--on-highlight);
     border: 1px solid var(--border);
+    letter-spacing: var(--badge-letter-spacing);
     flex-shrink: 0;
     margin-top: 0.15rem;
   }

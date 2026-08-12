@@ -10,6 +10,10 @@ export interface PlayerInfo {
   rosterPct?: number;
 }
 
+export interface PlayerData extends PlayerInfo {
+  adp?: string;
+}
+
 export interface MFLPlayer {
   id: string;
   name: string;
@@ -202,6 +206,18 @@ export interface MFLPlayerProfile {
   };
   news?: {
     article?: MFLPlayerNewsArticle | MFLPlayerNewsArticle[];
+  };
+}
+
+export interface MFLAdpPlayer {
+  id: string;
+  rank?: string;
+  averagePick?: string;
+}
+
+export interface MFLAdpResponse {
+  adp: {
+    player: MFLAdpPlayer | MFLAdpPlayer[];
   };
 }
 

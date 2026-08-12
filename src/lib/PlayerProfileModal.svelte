@@ -27,6 +27,9 @@
     return Array.isArray(raw) ? raw : [raw];
   });
 
+  const adpValue = $derived(profile?.player.adp?.trim() || '');
+  const isAdpMissing = $derived(!adpValue || adpValue === 'N/A' || adpValue === '0');
+
   const totalNewsPages = $derived(Math.max(1, Math.ceil(newsArticles.length / newsLimit)));
   const visibleNews = $derived(
     newsArticles.slice(newsPage * newsLimit, newsPage * newsLimit + newsLimit)
@@ -116,7 +119,7 @@
         </div>
         <div class="profile-stat">
           <span class="profile-stat-label">ADP</span>
-          <span class="profile-stat-value">{profile.player.adp ?? '—'}</span>
+          <span class="profile-stat-value">{isAdpMissing ? '—' : adpValue}</span>
         </div>
       </div>
       {#if player.availableIn}

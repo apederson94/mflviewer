@@ -10,6 +10,7 @@
     team,
     name,
     rosterPct,
+    adp,
     onSelect
   }: {
     id: string;
@@ -17,8 +18,12 @@
     team?: string;
     name: string;
     rosterPct?: number;
+    adp?: string;
     onSelect?: (player: ProfilePlayer) => void;
   } = $props();
+
+  const adpValue = $derived(adp?.trim() || '');
+  const showAdp = $derived(adpValue && adpValue !== 'N/A' && adpValue !== '0');
 
   const clickable = $derived(onSelect != null && isRealPlayerId(id));
 </script>
@@ -34,6 +39,9 @@
       <TeamChip {team} />
       {#if rosterPct != null}
         <span class="roster-badge">{rosterPct.toFixed(1)}%</span>
+      {/if}
+      {#if showAdp}
+        <span class="adp-badge">ADP {adpValue}</span>
       {/if}
     </span>
   </div>

@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getMyLeagues, getTransactions, getPendingWaivers, getFreeAgents, loadPlayerCache, getCurrentWeek, getCurrentYear, getPlayerName, getPlayerPosition, getLeagueFull, getFranchiseName, formatDraftPick, formatFaab, formatTimestamp, MFL_COOKIE_NAME } from '$lib/api';
-import type { MFLTransaction, MFLPendingWaiver, MFLFreeAgent, ParsedWaiverClaim, PlayerInfo } from '$lib/types';
+import type { MFLTransaction, MFLPendingWaiver, MFLFreeAgent, ParsedWaiverClaim, PlayerData } from '$lib/types';
 import { warmPlayerImages } from '$lib/playerImages';
 
 function getTransactionDisplayName(type: string): string {
@@ -29,7 +29,7 @@ function parseBBIDWaiverTransaction(transaction: string): { added: string[]; dro
   return { added, dropped, bid };
 }
 
-function resolveTradeItem(id: string, players: Map<string, PlayerInfo>, currentYear: string): { id: string; name: string; position: string; team?: string; rosterPct?: number } {
+function resolveTradeItem(id: string, players: Map<string, PlayerData>, currentYear: string): { id: string; name: string; position: string; team?: string; rosterPct?: number } {
   const cleanId = id.trim();
   if (cleanId.startsWith('BB_')) {
     return { id: cleanId, name: formatFaab(cleanId), position: 'FAAB' };

@@ -59,14 +59,15 @@
 
 <style>
   .team-chip {
-    font-size: 0.75rem;
-    font-weight: 700;
+    font-size: var(--badge-font-size);
+    font-weight: var(--badge-font-weight);
     border-radius: 0;
-    padding: 0.075rem 0.3rem;
+    padding: var(--badge-padding);
     white-space: nowrap;
     background: var(--team-bg, var(--pos-unk-bg));
     color: var(--team-text, var(--pos-unk-text));
     border: 1px solid var(--border);
+    letter-spacing: var(--badge-letter-spacing);
     flex-shrink: 0;
   }
 </style>
