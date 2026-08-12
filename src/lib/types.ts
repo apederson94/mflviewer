@@ -183,6 +183,12 @@ export interface MFLPendingWaiver {
   commentsFormatted?: string;
 }
 
+export interface MFLPlayerNewsArticle {
+  published?: string;
+  id?: string;
+  headline?: string;
+}
+
 export interface MFLPlayerProfile {
   name: string;
   id: string;
@@ -194,7 +200,9 @@ export interface MFLPlayerProfile {
     weight?: string;
     adp?: string;
   };
-  news?: Record<string, unknown>;
+  news?: {
+    article?: MFLPlayerNewsArticle | MFLPlayerNewsArticle[];
+  };
 }
 
 export interface MFLPlayerProfileResponse {

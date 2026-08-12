@@ -790,7 +790,7 @@
     </div>
   {/if}
 
-  <PlayerProfileModal player={profilePlayer} onclose={closeProfile} />
+  <PlayerProfileModal player={profilePlayer} onclose={closeProfile} year={year} />
 </div>
 
 <style>

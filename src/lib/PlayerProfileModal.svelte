@@ -1,13 +1,15 @@
 <script lang="ts">
   import PlayerAvatar from './PlayerAvatar.svelte';
   import TeamChip from './TeamChip.svelte';
-  import type { MFLPlayerProfile, ProfilePlayer } from './types';
+  import type { MFLPlayerNewsArticle, MFLPlayerProfile, ProfilePlayer } from './types';
 
   let {
     player,
+    year,
     onclose
   }: {
     player: ProfilePlayer | null;
+    year?: string;
     onclose: () => void;
   } = $props();
 
@@ -15,6 +17,12 @@
   let loading = $state(false);
   let error = $state<string | null>(null);
   let closeBtn = $state<HTMLButtonElement | null>(null);
+
+  const newsArticles = $derived.by<MFLPlayerNewsArticle[]>(() => {
+    const raw = profile?.news?.article;
+    if (!raw) return [];
+    return (Array.isArray(raw) ? raw : [raw]).slice(0, 5);
+  });
 
   async function load(): Promise<void> {
     if (!player) return;
@@ -105,6 +113,29 @@
       {#if player.availableIn}
         <div class="profile-avail">
           Available in {player.availableIn.length} league{player.availableIn.length === 1 ? '' : 's'}
+        </div>
+      {/if}
+      {#if newsArticles.length > 0}
+        <div class="profile-news">
+          <span class="profile-news-title">Recent News</span>
+          <ul class="profile-news-list">
+            {#each newsArticles as article}
+              <li class="profile-news-item">
+                <span class="profile-news-headline">{article.headline}</span>
+                {#if article.published}
+                  <span class="profile-news-time">{article.published}</span>
+                {/if}
+              </li>
+            {/each}
+          </ul>
+          <a
+            class="profile-news-link"
+            href={`https://www.myfantasyleague.com/${year}/news_articles?L=&P=${player.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            View all news on MFL →
+          </a>
         </div>
       {/if}
     {/if}
@@ -271,5 +302,73 @@
     text-transform: uppercase;
     letter-spacing: 0.5px;
     color: var(--free-agent-color);
+  }
+
+  .profile-news {
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 2px solid var(--border);
+  }
+
+  .profile-news-title {
+    display: block;
+    font-size: 0.6rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+  }
+
+  .profile-news-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .profile-news-item {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.4rem 0;
+    border-bottom: 1px dashed var(--border);
+  }
+
+  .profile-news-item:last-child {
+    border-bottom: none;
+  }
+
+  .profile-news-headline {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.3;
+  }
+
+  .profile-news-time {
+    flex-shrink: 0;
+    font-size: 0.65rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+  }
+
+  .profile-news-link {
+    display: inline-block;
+    margin-top: 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--highlight);
+    text-decoration: none;
+  }
+
+  .profile-news-link:hover {
+    text-decoration: underline;
   }
 </style>
