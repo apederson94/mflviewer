@@ -115,13 +115,22 @@
           Available in {player.availableIn.length} league{player.availableIn.length === 1 ? '' : 's'}
         </div>
       {/if}
-      {#if newsArticles.length > 0}
-        <div class="profile-news">
-          <span class="profile-news-title">Recent News</span>
+      <div class="profile-news">
+        <span class="profile-news-title">Recent News</span>
+        {#if newsArticles.length > 0}
           <ul class="profile-news-list">
             {#each newsArticles as article}
               <li class="profile-news-item">
-                <span class="profile-news-headline">{article.headline}</span>
+                {#if article.id}
+                  <a
+                    class="profile-news-headline"
+                    href={`https://www.myfantasyleague.com/${year}/view_news_article?L=&ID=${encodeURIComponent(article.id)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >{article.headline}</a>
+                {:else}
+                  <span class="profile-news-headline">{article.headline}</span>
+                {/if}
                 {#if article.published}
                   <span class="profile-news-time">{article.published}</span>
                 {/if}
@@ -136,8 +145,10 @@
           >
             View all news on MFL →
           </a>
-        </div>
-      {/if}
+        {:else}
+          <span class="profile-news-none">None</span>
+        {/if}
+      </div>
     {/if}
   </div>
 {/if}
@@ -346,6 +357,21 @@
     font-weight: 700;
     color: var(--text-primary);
     line-height: 1.3;
+  }
+
+  a.profile-news-headline {
+    text-decoration: none;
+  }
+
+  a.profile-news-headline:hover {
+    color: var(--highlight);
+    text-decoration: underline;
+  }
+
+  .profile-news-none {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted);
   }
 
   .profile-news-time {
