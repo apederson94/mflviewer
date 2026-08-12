@@ -18,16 +18,23 @@
   let error = $state<string | null>(null);
   let closeBtn = $state<HTMLButtonElement | null>(null);
 
+  const newsLimit = 5;
+  let showAllNews = $state(false);
+
   const newsArticles = $derived.by<MFLPlayerNewsArticle[]>(() => {
     const raw = profile?.news?.article;
     if (!raw) return [];
-    return (Array.isArray(raw) ? raw : [raw]).slice(0, 5);
+    return Array.isArray(raw) ? raw : [raw];
   });
+
+  const visibleNews = $derived(showAllNews ? newsArticles : newsArticles.slice(0, newsLimit));
+  const hasMoreNews = $derived(newsArticles.length > newsLimit);
 
   async function load(): Promise<void> {
     if (!player) return;
     profile = null;
     error = null;
+    showAllNews = false;
     loading = true;
     try {
       const res = await fetch(`/api/player-profile/${encodeURIComponent(player.id)}`);
@@ -119,7 +126,7 @@
         <span class="profile-news-title">Recent News</span>
         {#if newsArticles.length > 0}
           <ul class="profile-news-list">
-            {#each newsArticles as article}
+            {#each visibleNews as article}
               <li class="profile-news-item">
                 {#if article.id}
                   <a
@@ -137,6 +144,17 @@
               </li>
             {/each}
           </ul>
+          {#if hasMoreNews}
+            <button
+              type="button"
+              class="profile-news-toggle"
+              onclick={() => {
+                showAllNews = !showAllNews;
+              }}
+            >
+              {showAllNews ? 'Show less' : `Show all (${newsArticles.length})`}
+            </button>
+          {/if}
           <a
             class="profile-news-link"
             href={`https://www.myfantasyleague.com/${year}/news_articles?L=&P=${player.id}`}
@@ -396,5 +414,24 @@
 
   .profile-news-link:hover {
     text-decoration: underline;
+  }
+
+  .profile-news-toggle {
+    display: block;
+    margin-top: 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-primary);
+    background: var(--bg-secondary);
+    border: 2px solid var(--border);
+    padding: 0.25rem 0.5rem;
+    cursor: pointer;
+  }
+
+  .profile-news-toggle:hover {
+    color: var(--on-highlight);
+    background: var(--highlight);
   }
 </style>
