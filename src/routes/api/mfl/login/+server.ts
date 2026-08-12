@@ -1,4 +1,5 @@
 import { json } from '@sveltejs/kit';
+import { dev } from '$app/environment';
 import type { RequestHandler } from './$types';
 import { login, MFL_COOKIE_NAME } from '$lib/api';
 
@@ -11,7 +12,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
     return json({ success: false, error: 'Username and password required' }, { status: 400 });
   }
 
-  const secure = process.env.NODE_ENV === 'production';
+  const secure = !dev;
   const maxAge = secure ? 60 * 60 * 24 : 60 * 60 * 2;
 
   try {

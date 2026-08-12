@@ -8,7 +8,7 @@ declare global {
 			loggedIn: boolean;
 			leagues: Array<{ id: string; name: string }>;
 			week: number;
-			year: number;
+			year: string;
 			error?: string;
 			players: Array<[string, { name: string; position: string }]>;
 		}
