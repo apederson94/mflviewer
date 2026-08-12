@@ -19,7 +19,7 @@
   let closeBtn = $state<HTMLButtonElement | null>(null);
 
   const newsLimit = 5;
-  let showAllNews = $state(false);
+  let newsPage = $state(0);
 
   const newsArticles = $derived.by<MFLPlayerNewsArticle[]>(() => {
     const raw = profile?.news?.article;
@@ -27,14 +27,16 @@
     return Array.isArray(raw) ? raw : [raw];
   });
 
-  const visibleNews = $derived(showAllNews ? newsArticles : newsArticles.slice(0, newsLimit));
-  const hasMoreNews = $derived(newsArticles.length > newsLimit);
+  const totalNewsPages = $derived(Math.max(1, Math.ceil(newsArticles.length / newsLimit)));
+  const visibleNews = $derived(
+    newsArticles.slice(newsPage * newsLimit, newsPage * newsLimit + newsLimit)
+  );
 
   async function load(): Promise<void> {
     if (!player) return;
     profile = null;
     error = null;
-    showAllNews = false;
+    newsPage = 0;
     loading = true;
     try {
       const res = await fetch(`/api/player-profile/${encodeURIComponent(player.id)}`);
@@ -144,16 +146,28 @@
               </li>
             {/each}
           </ul>
-          {#if hasMoreNews}
-            <button
-              type="button"
-              class="profile-news-toggle"
-              onclick={() => {
-                showAllNews = !showAllNews;
-              }}
-            >
-              {showAllNews ? 'Show less' : `Show all (${newsArticles.length})`}
-            </button>
+          {#if totalNewsPages > 1}
+            <div class="profile-news-pager">
+              <button
+                type="button"
+                class="profile-news-arrow"
+                aria-label="Previous page"
+                disabled={newsPage === 0}
+                onclick={() => {
+                  if (newsPage > 0) newsPage -= 1;
+                }}
+              >←</button>
+              <span class="profile-news-page">Page {newsPage + 1} of {totalNewsPages}</span>
+              <button
+                type="button"
+                class="profile-news-arrow"
+                aria-label="Next page"
+                disabled={newsPage >= totalNewsPages - 1}
+                onclick={() => {
+                  if (newsPage < totalNewsPages - 1) newsPage += 1;
+                }}
+              >→</button>
+            </div>
           {/if}
           <a
             class="profile-news-link"
@@ -416,22 +430,43 @@
     text-decoration: underline;
   }
 
-  .profile-news-toggle {
-    display: block;
+  .profile-news-pager {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
     margin-top: 0.5rem;
+  }
+
+  .profile-news-arrow {
+    width: 1.75rem;
+    height: 1.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    font-weight: 900;
+    line-height: 1;
+    color: var(--text-primary);
+    background: var(--bg-secondary);
+    border: 2px solid var(--border);
+    cursor: pointer;
+  }
+
+  .profile-news-arrow:hover:not(:disabled) {
+    color: var(--on-highlight);
+    background: var(--highlight);
+  }
+
+  .profile-news-arrow:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .profile-news-page {
     font-size: 0.7rem;
     font-weight: 900;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    color: var(--text-primary);
-    background: var(--bg-secondary);
-    border: 2px solid var(--border);
-    padding: 0.25rem 0.5rem;
-    cursor: pointer;
-  }
-
-  .profile-news-toggle:hover {
-    color: var(--on-highlight);
-    background: var(--highlight);
+    color: var(--text-muted);
   }
 </style>
