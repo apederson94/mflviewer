@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import type { PageData } from './$types';
 	import type { MFLTransaction, MFLPendingWaiver, Player, Tab } from '$lib';
+	import type { DaysOption, PositionOption, SortOption } from '$lib';
 	import { fetchJson } from '$lib/fetchJson';
 	import Header from '$lib/components/Header.svelte';
 	import Sidebar from '$lib/components/Sidebar.svelte';
@@ -33,9 +34,9 @@
 	let error = $state<string | null>(null);
 	let formLoading = $state(false);
 
-	let selectedDays = $state('1');
+	let selectedDays = $state<DaysOption>('1');
 	let showTrades = $state(false);
-	let txSort = $state<'roster' | 'adp'>('roster');
+	let txSort = $state<SortOption>('roster');
 	let mobileFilterOpen = $state(false);
 	let leagueSearch = $state('');
 	let activeTab = $state<Tab>('transactions');
@@ -43,10 +44,10 @@
 	let waiverLoading = $state(false);
 	let freeAgents = $state<Player[]>([]);
 	let freeAgentLoading = $state(false);
-	let faPosition = $state('ALL');
+	let faPosition = $state<PositionOption>('ALL');
 	let faSearch = $state('');
 	let hideLocked = $state(false);
-	let faSort = $state<'roster' | 'adp'>('roster');
+	let faSort = $state<SortOption>('roster');
 
 	let profilePlayer = $state<Player | null>(null);
 

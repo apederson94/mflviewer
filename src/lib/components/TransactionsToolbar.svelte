@@ -1,7 +1,14 @@
 <script lang="ts">
+	import {
+		DAY_OPTIONS,
+		SORT_OPTIONS,
+		type DaysOption,
+		type SortOption
+	} from '$lib';
+
 	let {
 		selectedDays = $bindable('1'),
-		txSort = $bindable<'roster' | 'adp'>('roster'),
+		txSort = $bindable('roster'),
 		showTrades = $bindable(false),
 		selectedCount,
 		totalCount,
@@ -9,8 +16,8 @@
 		onDaysChange,
 		onShowTradesChange
 	}: {
-		selectedDays?: string;
-		txSort?: 'roster' | 'adp';
+		selectedDays?: DaysOption;
+		txSort?: SortOption;
 		showTrades?: boolean;
 		selectedCount: number;
 		totalCount: number;
@@ -34,19 +41,20 @@
 		bind:value={selectedDays}
 		onchange={onDaysChange}
 	>
-		<option value="1">1 day</option>
-		<option value="7">7 days</option>
-		<option value="14">14 days</option>
-		<option value="30">30 days</option>
-		<option value="all">All</option>
+		{#each DAY_OPTIONS as day}
+			<option value={day.value}
+				>{day.value === 'all' ? 'All' : day.label}</option
+			>
+		{/each}
 	</select>
 	<select
 		class="mobile-toolbar-select"
 		bind:value={txSort}
 		aria-label="Sort transactions"
 	>
-		<option value="roster">Roster %</option>
-		<option value="adp">ADP</option>
+		{#each SORT_OPTIONS as sort}
+			<option value={sort.value}>{sort.label}</option>
+		{/each}
 	</select>
 	<label class="mobile-toolbar-trades">
 		<input

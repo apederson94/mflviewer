@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { FA_POSITIONS } from '$lib';
+	import { FA_POSITIONS, type PositionOption } from '$lib';
 
 	let {
 		faPosition = $bindable('ALL'),
 		faSearch = $bindable('')
 	}: {
-		faPosition?: string;
+		faPosition?: PositionOption;
 		faSearch?: string;
 	} = $props();
 </script>

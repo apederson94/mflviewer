@@ -1,5 +1,14 @@
 <script lang="ts">
-	import { FA_POSITIONS, type League, type Tab } from '$lib';
+	import {
+		FA_POSITIONS,
+		DAY_OPTIONS,
+		SORT_OPTIONS,
+		type League,
+		type Tab,
+		type DaysOption,
+		type PositionOption,
+		type SortOption
+	} from '$lib';
 
 	let {
 		open,
@@ -10,11 +19,11 @@
 		activeTab,
 		leagueSearch = $bindable(''),
 		selectedDays = $bindable('1'),
-		txSort = $bindable<'roster' | 'adp'>('roster'),
+		txSort = $bindable('roster'),
 		showTrades = $bindable(false),
 		faSearch = $bindable(''),
 		faPosition = $bindable('ALL'),
-		faSort = $bindable<'roster' | 'adp'>('roster'),
+		faSort = $bindable('roster'),
 		hideLocked = $bindable(false),
 		onClose,
 		onSelectionChange,
@@ -28,12 +37,12 @@
 		dataError?: string;
 		activeTab: Tab;
 		leagueSearch?: string;
-		selectedDays?: string;
-		txSort?: 'roster' | 'adp';
+		selectedDays?: DaysOption;
+		txSort?: SortOption;
 		showTrades?: boolean;
 		faSearch?: string;
-		faPosition?: string;
-		faSort?: 'roster' | 'adp';
+		faPosition?: PositionOption;
+		faSort?: SortOption;
 		hideLocked?: boolean;
 		onClose: () => void;
 		onSelectionChange: (ids: string[]) => void;
@@ -57,8 +66,6 @@
 	);
 
 	let selectedCount = $derived(selectedLeagueIds.size);
-
-	const faPositions = FA_POSITIONS;
 
 	function toggleLeague(leagueId: string) {
 		const next = new Set(selectedLeagueIds);
@@ -154,18 +161,17 @@
 							bind:value={selectedDays}
 							onchange={onDaysChange}
 						>
-							<option value="1">1 day</option>
-							<option value="7">7 days</option>
-							<option value="14">14 days</option>
-							<option value="30">30 days</option>
-							<option value="all">All (current year)</option>
+							{#each DAY_OPTIONS as day}
+								<option value={day.value}>{day.label}</option>
+							{/each}
 						</select>
 					</div>
 					<div class="sidebar-filter-group">
 						<label for="tx-sort-select" class="sidebar-label">Sort by</label>
 						<select id="tx-sort-select" bind:value={txSort}>
-							<option value="roster">Roster %</option>
-							<option value="adp">ADP</option>
+							{#each SORT_OPTIONS as sort}
+								<option value={sort.value}>{sort.label}</option>
+							{/each}
 						</select>
 					</div>
 					<label class="sidebar-trade-toggle">
@@ -189,7 +195,7 @@
 							>Position</label
 						>
 						<select id="fa-position-select" bind:value={faPosition}>
-							{#each faPositions as pos}
+							{#each FA_POSITIONS as pos}
 								<option value={pos}>{pos === 'ALL' ? 'All' : pos}</option>
 							{/each}
 						</select>
@@ -197,8 +203,9 @@
 					<div class="sidebar-filter-group">
 						<label for="fa-sort-select" class="sidebar-label">Sort by</label>
 						<select id="fa-sort-select" bind:value={faSort}>
-							<option value="roster">Roster %</option>
-							<option value="adp">ADP</option>
+							{#each SORT_OPTIONS as sort}
+								<option value={sort.value}>{sort.label}</option>
+							{/each}
 						</select>
 					</div>
 					<label class="sidebar-trade-toggle">

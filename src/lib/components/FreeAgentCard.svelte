@@ -110,17 +110,6 @@
 		background: var(--free-agent-color);
 	}
 
-	@keyframes fadeInUp {
-		from {
-			opacity: 0;
-			transform: translateY(12px);
-		}
-		to {
-			opacity: 1;
-			transform: translateY(0);
-		}
-	}
-
 	.fa-card:hover {
 		transform: translate(-2px, -2px);
 		box-shadow: var(--card-shadow-hover);

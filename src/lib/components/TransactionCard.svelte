@@ -31,8 +31,7 @@
 			<span class="trade-col">{transaction.tradePartnerName}</span>
 		</div>
 		<div class="trade-sides">
-			<div class="trade-side">
-				<div class="trade-separator"></div>
+			<div class="side-box">
 				<div class="trade-side-content">
 					{#if transaction.tradeReceives?.length}
 						<div class="player-list">
@@ -53,8 +52,7 @@
 					{/if}
 				</div>
 			</div>
-			<div class="trade-side">
-				<div class="trade-separator"></div>
+			<div class="side-box">
 				<div class="trade-side-content">
 					{#if transaction.tradeGives?.length}
 						<div class="player-list">
@@ -84,7 +82,7 @@
 			</div>
 		</div>
 		<div class="fa-sides">
-			<div class="fa-side">
+			<div class="side-box">
 				<span class="fa-side-header">Added</span>
 				<span class="fa-side-content">
 					{#if transaction.addedPlayers?.length}
@@ -106,7 +104,7 @@
 					{/if}
 				</span>
 			</div>
-			<div class="fa-side">
+			<div class="side-box">
 				<span class="fa-side-header">Dropped</span>
 				<span class="fa-side-content">
 					{#if transaction.droppedPlayers?.length}
@@ -162,25 +160,12 @@
 		background: var(--trade-color);
 	}
 
-	.transaction-card[data-type='FA Pickup']::before,
-	.transaction-card[data-type='Free Agent']::before,
 	.transaction-card[data-type='Add/Drop']::before {
 		background: var(--free-agent-color);
 	}
 
 	.transaction-card[data-type='Waiver']::before {
 		background: var(--waiver-color);
-	}
-
-	@keyframes fadeInUp {
-		from {
-			opacity: 0;
-			transform: translateY(12px);
-		}
-		to {
-			opacity: 1;
-			transform: translateY(0);
-		}
 	}
 
 	.transaction-card:hover {
@@ -213,8 +198,6 @@
 		background: var(--type-trade-bg);
 	}
 
-	.transaction-card[data-type='FA Pickup'] .transaction-type,
-	.transaction-card[data-type='Free Agent'] .transaction-type,
 	.transaction-card[data-type='Add/Drop'] .transaction-type {
 		color: var(--free-agent-color);
 		background: var(--type-fa-bg);
@@ -225,9 +208,9 @@
 		background: var(--type-waiver-bg);
 	}
 
-	.transaction-card:not([data-type='Trade']):not([data-type='FA Pickup']):not(
-			[data-type='Free Agent']
-		):not([data-type='Add/Drop']):not([data-type='Waiver'])
+	.transaction-card:not([data-type='Trade']):not([data-type='Add/Drop']):not(
+			[data-type='Waiver']
+		)
 		.transaction-type {
 		color: var(--text-secondary);
 		background: var(--type-other-bg);
@@ -282,7 +265,7 @@
 		font-size: 0.9rem;
 	}
 
-	.trade-side {
+	.side-box {
 		flex: 1;
 		min-width: 0;
 		padding: 0.6rem;
@@ -295,13 +278,9 @@
 		text-align: left;
 	}
 
-	.trade-side:hover {
+	.side-box:hover {
 		transform: translate(-1px, -1px);
 		box-shadow: var(--card-shadow);
-	}
-
-	.trade-separator {
-		display: none;
 	}
 
 	.trade-side-content {
@@ -327,24 +306,6 @@
 		font-size: 0.9rem;
 	}
 
-	.fa-side {
-		flex: 1;
-		min-width: 0;
-		padding: 0.6rem;
-		background: var(--bg-paper);
-		border: 2px solid var(--border);
-		border-radius: 0;
-		word-break: break-word;
-		box-shadow: var(--shadow-sm);
-		transition: all 0.1s ease;
-		text-align: left;
-	}
-
-	.fa-side:hover {
-		transform: translate(-1px, -1px);
-		box-shadow: var(--card-shadow);
-	}
-
 	.fa-side-header {
 		display: block;
 		font-size: 0.7rem;
@@ -354,11 +315,11 @@
 		margin-bottom: 0.25rem;
 	}
 
-	.fa-side:first-child .fa-side-header {
+	.side-box:first-child .fa-side-header {
 		color: var(--free-agent-color);
 	}
 
-	.fa-side:last-child .fa-side-header {
+	.side-box:last-child .fa-side-header {
 		color: var(--drop-color);
 	}
 
