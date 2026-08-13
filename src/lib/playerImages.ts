@@ -3,6 +3,9 @@ const MFL_IMAGE_BASE = 'https://www.myfantasyleague.com/player_photos_2014/';
 const imageCache = new Map<string, ArrayBuffer>();
 const missingImages = new Set<string>();
 const inflight = new Map<string, Promise<ArrayBuffer | null>>();
+const failedImages = new Map<string, number>();
+
+const FAILURE_COOLDOWN_MS = 10 * 60 * 1000;
 
 let cacheDate = '';
 let cachePending = false;
@@ -16,23 +19,32 @@ export function resetImageCacheIfStale(): void {
 		imageCache.clear();
 		missingImages.clear();
 		inflight.clear();
+		failedImages.clear();
 		cacheDate = new Date().toDateString();
 	}
 }
 
 async function fetchImage(id: string): Promise<ArrayBuffer | null> {
+	const cooldownUntil = failedImages.get(id);
+	if (cooldownUntil && Date.now() < cooldownUntil) return null;
+
 	try {
 		const response = await fetch(MFL_IMAGE_BASE + id + '_thumb.jpg', {
 			signal: AbortSignal.timeout(15000)
 		});
+		if (response.status === 404) {
+			missingImages.add(id);
+			return null;
+		}
 		if (!response.ok) {
-			if (response.status === 404) missingImages.add(id);
+			failedImages.set(id, Date.now() + FAILURE_COOLDOWN_MS);
 			return null;
 		}
 		const bytes = await response.arrayBuffer();
 		imageCache.set(id, bytes);
 		return bytes;
 	} catch {
+		failedImages.set(id, Date.now() + FAILURE_COOLDOWN_MS);
 		return null;
 	}
 }

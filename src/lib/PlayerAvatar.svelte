@@ -16,19 +16,28 @@
 	const isFaab = $derived(position === 'FAAB' || id.startsWith('BB_'));
 	const src = $derived('/api/player-image/' + encodeURIComponent(id));
 	const initial = $derived(position && position !== 'UNK' ? position[0] : '?');
+	const dims = $derived(
+		size === 'sm'
+			? { width: 24, height: 24 }
+			: size === 'lg'
+				? { width: 44, height: 44 }
+				: { width: 36, height: 36 }
+	);
 </script>
 
 {#if isFaab}
 	<span
 		class="player-photo player-photo-fallback player-photo-faab"
 		class:sm={size === 'sm'}
-		class:lg={size === 'lg'}>$</span
+		class:lg={size === 'lg'}
+		style={`width:${dims.width}px;height:${dims.height}px`}>$</span
 	>
 {:else if failed}
 	<span
 		class="player-photo player-photo-fallback"
 		class:sm={size === 'sm'}
-		class:lg={size === 'lg'}>{initial}</span
+		class:lg={size === 'lg'}
+		style={`width:${dims.width}px;height:${dims.height}px`}>{initial}</span
 	>
 {:else}
 	<img
@@ -39,8 +48,7 @@
 		{alt}
 		loading="lazy"
 		decoding="async"
-		width="80"
-		height="107"
+		{...dims}
 		onerror={() => (failed = true)}
 	/>
 {/if}

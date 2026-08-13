@@ -173,15 +173,11 @@ export async function getMyLeagues(cookie?: string): Promise<StoredLeague[]> {
 	const baseUrl = await getBaseUrl();
 	const url = `${baseUrl}?TYPE=myleagues&JSON=1`;
 
-	console.log(`Fetching leagues, cookie present: ${!!cookie}`);
-
 	try {
 		const response = await fetchJSON<MFLMyLeaguesResponse>(url, cookie);
 		const leagues = response.leagues?.league
 			? toArray(response.leagues.league)
 			: [];
-
-		console.log(`Fetched ${leagues.length} leagues, success: true`);
 
 		return leagues.map((league) => ({
 			id: league.league_id,
@@ -190,44 +186,6 @@ export async function getMyLeagues(cookie?: string): Promise<StoredLeague[]> {
 	} catch (error) {
 		console.error(`Fetch leagues failed: ${error}`);
 		throw error;
-	}
-}
-
-export async function getLeagueById(
-	leagueId: string,
-	cookie?: string
-): Promise<StoredLeague | null> {
-	const baseUrl = await getBaseUrl();
-	const url = `${baseUrl}?TYPE=league&L=${leagueId}&JSON=1`;
-
-	console.log(`Fetching league ${leagueId}`);
-
-	try {
-		const response = await fetchJSON<Record<string, unknown>>(url, cookie);
-		const payloadSize = JSON.stringify(response).length;
-		console.log(
-			`Fetched league ${leagueId}, payload bytes: ${payloadSize}, success: true`
-		);
-
-		const attrs = response['@attributes'] as Record<string, string> | undefined;
-		if (attrs && (attrs.id || attrs.name)) {
-			return {
-				id: attrs.id || leagueId,
-				name: attrs.name || 'Unknown League'
-			};
-		}
-
-		if (response.id || response.name) {
-			return {
-				id: response.id as string,
-				name: response.name as string
-			};
-		}
-
-		return null;
-	} catch (error) {
-		console.error(`Fetch league ${leagueId} failed: ${error}`);
-		return null;
 	}
 }
 
@@ -259,15 +217,10 @@ export async function getLeagueFull(
 
 		if (response.league?.franchises?.franchise) {
 			const franchises = toArray(response.league.franchises.franchise);
-
 			franchises.forEach((franchise) => {
 				franchiseMap.set(franchise.id, franchise.name);
 			});
 		}
-
-		console.log(
-			`Fetched full league ${leagueId}, franchises: ${franchiseMap.size}`
-		);
 
 		const league: LeagueFull = {
 			id: leagueIdVal,
@@ -275,7 +228,7 @@ export async function getLeagueFull(
 			franchises: franchiseMap
 		};
 
-		leagueFullCache.set(leagueId, { league, timestamp: Date.now() });
+		leagueFullCache.set(leagueIdVal, { league, timestamp: Date.now() });
 
 		return league;
 	} catch (error) {
@@ -304,70 +257,66 @@ export async function loadPlayerCache(
 		const adpUrl = `${baseUrl}?TYPE=adp&JSON=1`;
 		const playerCacheMap = new Map<string, PlayerData>();
 
-		console.log(`Fetching players, cookie present: ${!!cookie}`);
+		const [playerRes, ownsRes, adpRes] = await Promise.allSettled([
+			fetchJSON<MFLPlayersResponse>(playersUrl, cookie),
+			fetchJSON<MFLTopOwnsResponse>(ownsUrl),
+			fetchJSON<MFLAdpResponse>(adpUrl)
+		]);
 
-		try {
-			const [playerRes, ownsRes, adpRes] = await Promise.allSettled([
-				fetchJSON<MFLPlayersResponse>(playersUrl, cookie),
-				fetchJSON<MFLTopOwnsResponse>(ownsUrl),
-				fetchJSON<MFLAdpResponse>(adpUrl)
-			]);
-
-			if (playerRes.status === 'fulfilled' && playerRes.value.players?.player) {
-				const players = toArray(playerRes.value.players.player);
-				players.forEach((player) => {
-					playerCacheMap.set(player.id, {
-						name: player.name,
-						position: player.position,
-						team: player.team
-					});
-				});
-			}
-
-			if (ownsRes.status === 'fulfilled' && ownsRes.value.topOwns?.player) {
-				const owns = toArray(ownsRes.value.topOwns.player);
-				owns.forEach(({ id, percent }) => {
-					const existing = playerCacheMap.get(id);
-					if (existing) {
-						existing.rosterPct = parseFloat(percent);
-					}
-				});
-			}
-
-			if (adpRes.status === 'fulfilled' && adpRes.value.adp?.player) {
-				const adp = toArray(adpRes.value.adp.player);
-				adp.forEach(({ id, averagePick }) => {
-					if (!averagePick) return;
-					const existing = playerCacheMap.get(id);
-					if (existing) {
-						existing.adp = averagePick;
-					} else {
-						playerCacheMap.set(id, {
-							name: '',
-							position: '',
-							adp: averagePick
-						});
-					}
-				});
-			}
-
-			const payloadSize = JSON.stringify(
-				playerRes.status === 'fulfilled' ? playerRes.value : {}
-			).length;
-
-			playerCache = {
-				players: playerCacheMap,
-				timestamp: Date.now()
-			};
-
-			resetImageCacheIfStale();
-
-			console.log(
-				`Fetched ${playerCacheMap.size} players, payload bytes: ${payloadSize}, success: true`
+		if (playerRes.status === 'rejected') {
+			throw new Error(
+				`Failed to load players: ${
+					playerRes.reason instanceof Error
+						? playerRes.reason.message
+						: String(playerRes.reason)
+				}`
 			);
-		} catch (error) {
-			console.error(`Fetch players failed: ${error}`);
 		}
+
+		if (playerRes.value.players?.player) {
+			const players = toArray(playerRes.value.players.player);
+			players.forEach((player) => {
+				playerCacheMap.set(player.id, {
+					name: player.name,
+					position: player.position,
+					team: player.team
+				});
+			});
+		}
+
+		if (ownsRes.status === 'fulfilled' && ownsRes.value.topOwns?.player) {
+			const owns = toArray(ownsRes.value.topOwns.player);
+			owns.forEach(({ id, percent }) => {
+				const existing = playerCacheMap.get(id);
+				if (existing) {
+					existing.rosterPct = parseFloat(percent);
+				}
+			});
+		}
+
+		if (adpRes.status === 'fulfilled' && adpRes.value.adp?.player) {
+			const adp = toArray(adpRes.value.adp.player);
+			adp.forEach(({ id, averagePick }) => {
+				if (!averagePick) return;
+				const existing = playerCacheMap.get(id);
+				if (existing) {
+					existing.adp = averagePick;
+				} else {
+					playerCacheMap.set(id, {
+						name: '',
+						position: '',
+						adp: averagePick
+					});
+				}
+			});
+		}
+
+		playerCache = {
+			players: playerCacheMap,
+			timestamp: Date.now()
+		};
+
+		resetImageCacheIfStale();
 
 		return playerCacheMap;
 	})().finally(() => {
@@ -470,18 +419,12 @@ export function formatTimestamp(timestamp: string): string {
 export async function getTransactions(
 	leagueId: string,
 	cookie?: string,
-	days?: number,
-	week?: number
+	days?: number
 ): Promise<MFLTransaction[]> {
 	const baseUrl = await getBaseUrl();
 	const base = `TYPE=transactions&L=${leagueId}&JSON=1`;
 
-	let timeParam = '';
-	if (days) {
-		timeParam = `&DAYS=${days}`;
-	} else if (week) {
-		timeParam = `&W=${week}`;
-	}
+	const timeParam = days ? `&DAYS=${days}` : '';
 
 	const waiversUrl = `${baseUrl}?${base}&TRANS_TYPE=BBID_WAIVER,WAIVER${timeParam}`;
 	const otherUrl = `${baseUrl}?${base}&TRANS_TYPE=FREE_AGENT,TRADE${timeParam}`;
@@ -505,9 +448,6 @@ export async function getTransactions(
 				parseInt(b.timestamp || '0', 10) - parseInt(a.timestamp || '0', 10)
 		);
 
-		console.log(
-			`Fetched ${merged.length} transactions for league ${leagueId} (${waivers.length} waivers, ${other.length} other)`
-		);
 		return merged;
 	} catch (error) {
 		console.error(`Fetch transactions for league ${leagueId} failed: ${error}`);

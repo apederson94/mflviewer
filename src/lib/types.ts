@@ -153,6 +153,7 @@ export interface MFLLoginResponse {
 }
 
 export interface MFLPendingWaiverRequest {
+	franchise?: string;
 	comments: string;
 	timestamp: string;
 	round: string;

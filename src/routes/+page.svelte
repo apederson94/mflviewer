@@ -19,14 +19,7 @@
 		new Set<string>(data.leagues?.map((l) => l.id) ?? [])
 	);
 	let transactions = $state<MFLTransaction[]>([]);
-	let playerCache = $state(
-		new Map(
-			(data.players || []) as [
-				string,
-				{ name: string; position: string; rosterPct?: number; adp?: string }
-			][]
-		)
-	);
+	let playerCache = $state(new Map(data.players || []));
 	let loading = $state(false);
 	let error = $state<string | null>(null);
 	let loginUsername = $state('');
@@ -81,8 +74,6 @@
 	);
 
 	let selectedCount = $derived(selectedLeagueIds.size);
-
-	let totalLeagues = $derived(selectedLeagueIds.size);
 
 	const faPositions = [
 		'ALL',
@@ -582,11 +573,14 @@
 			</a>
 		</aside>
 
-		<div
+		<button
+			type="button"
 			class="mobile-backdrop"
 			class:open={mobileFilterOpen}
+			aria-label="Close filters"
+			tabindex="-1"
 			onclick={toggleMobileFilter}
-		></div>
+		></button>
 
 		<main class="content">
 			{#if error}
@@ -989,7 +983,7 @@
 										{#if fa.locked}
 											<span class="fa-lock">Locked</span>
 										{/if}
-										{#if fa.availableIn.length < totalLeagues}
+										{#if fa.availableIn.length < selectedCount}
 											<button
 												type="button"
 												class="fa-avail"
@@ -1008,7 +1002,7 @@
 													}
 												}}
 											>
-												FA {fa.availableIn.length}/{totalLeagues}
+												FA {fa.availableIn.length}/{selectedCount}
 											</button>
 										{/if}
 									</div>
@@ -1969,6 +1963,10 @@
 
 	.mobile-backdrop {
 		display: none;
+		border: none;
+		padding: 0;
+		margin: 0;
+		cursor: pointer;
 	}
 
 	.sidebar-header {

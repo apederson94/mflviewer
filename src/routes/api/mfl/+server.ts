@@ -1,12 +1,10 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import {
-	getMyLeagues,
 	getTransactions,
 	getPendingWaivers,
 	getFreeAgents,
 	loadPlayerCache,
-	getCurrentWeek,
 	getCurrentYear,
 	getPlayerName,
 	getPlayerPosition,
@@ -121,11 +119,6 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
 
 	try {
 		switch (type) {
-			case 'leagues': {
-				const leagues = await getMyLeagues(cookie);
-				return json({ leagues });
-			}
-
 			case 'transactions': {
 				if (!leagueId) {
 					return json({ error: 'League ID required' }, { status: 400 });
@@ -416,8 +409,9 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
 							0
 						);
 						const commentsFormatted = w.comments.replace(/br\//g, '\n');
-						const franchiseName =
-							franchiseMap.values().next().value || 'Your Team';
+						const franchiseName = w.franchise
+							? getFranchiseName(franchiseMap, w.franchise)
+							: 'Your Team';
 
 						allEnriched.push({
 							...w,
@@ -520,16 +514,6 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
 				).catch((err) => console.error('Free agent image warm failed:', err));
 
 				return json({ freeAgents });
-			}
-
-			case 'players': {
-				const players = await loadPlayerCache(cookie);
-				return json({ players: Array.from(players.entries()) });
-			}
-
-			case 'week': {
-				const week = await getCurrentWeek();
-				return json({ week });
 			}
 
 			default:
