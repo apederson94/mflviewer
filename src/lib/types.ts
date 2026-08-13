@@ -9,6 +9,13 @@ export interface Player {
 	locked?: boolean;
 }
 
+export interface League {
+	id: string;
+	name: string;
+}
+
+export type Tab = 'transactions' | 'waivers' | 'freeAgents';
+
 export interface PlayerData {
 	name: string;
 	position: string;
