@@ -1,6 +1,7 @@
 <script lang="ts">
 	import PlayerAvatar from './PlayerAvatar.svelte';
 	import TeamChip from './TeamChip.svelte';
+	import { fetchJson } from './fetchJson';
 	import type { MFLPlayerNewsArticle, MFLPlayerProfile, Player } from './types';
 
 	let {
@@ -46,16 +47,9 @@
 		newsPage = 0;
 		loading = true;
 		try {
-			const res = await fetch(
+			const data = await fetchJson<MFLPlayerProfile>(
 				`/api/player-profile/${encodeURIComponent(player.id)}`
 			);
-			const data = await res.json();
-			if (data.error) {
-				throw new Error(data.error);
-			}
-			if (!res.ok) {
-				throw new Error(`Failed to load profile (${res.status})`);
-			}
 			profile = data;
 		} catch (err) {
 			error =

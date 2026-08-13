@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import type { PageData } from './$types';
 	import type { MFLTransaction, MFLPendingWaiver, Player, Tab } from '$lib';
+	import { fetchJson } from '$lib/fetchJson';
 	import Header from '$lib/components/Header.svelte';
 	import Sidebar from '$lib/components/Sidebar.svelte';
 	import TabNavigation from '$lib/components/TabNavigation.svelte';
@@ -46,9 +47,6 @@
 	let faSearch = $state('');
 	let hideLocked = $state(false);
 	let faSort = $state<'roster' | 'adp'>('roster');
-	let loadId = 0;
-	let waiverLoadId = 0;
-	let freeAgentLoadId = 0;
 
 	let profilePlayer = $state<Player | null>(null);
 
@@ -142,88 +140,71 @@
 		loadTransactions(Array.from(selectedLeagueIds));
 	}
 
-	async function loadTransactions(leagueIds: string[]) {
-		if (leagueIds.length === 0) {
-			transactions = [];
-			return;
-		}
-		const thisLoad = ++loadId;
-		loading = true;
-		error = null;
-		try {
-			const res = await fetch(
-				`/api/mfl?type=transactions&league=${leagueIds.join(',')}&days=${selectedDays}&includeTrades=${showTrades}`
-			);
-			if (thisLoad !== loadId) return;
-			const data = await res.json();
-			if (data.error) {
-				throw new Error(data.error);
+	function createTabLoader<TResponse, TList>(config: {
+		buildUrl: (leagueIds: string[]) => string;
+		extract: (data: TResponse) => TList[];
+		setList: (list: TList[]) => void;
+		setLoading: (loading: boolean) => void;
+	}): (leagueIds: string[]) => Promise<void> {
+		let controller: AbortController | null = null;
+
+		return async function load(leagueIds: string[]) {
+			controller?.abort();
+			controller = null;
+			if (leagueIds.length === 0) {
+				config.setList([]);
+				return;
 			}
-			transactions = data.transactions || [];
-		} catch (err) {
-			if (thisLoad !== loadId) return;
-			error =
-				err instanceof Error ? err.message : 'Failed to load transactions';
-			transactions = [];
-		} finally {
-			if (thisLoad === loadId) loading = false;
-		}
+			const ctrl = new AbortController();
+			controller = ctrl;
+			config.setLoading(true);
+			error = null;
+			try {
+				const data = await fetchJson<TResponse>(
+					config.buildUrl(leagueIds),
+					ctrl.signal
+				);
+				if (ctrl.signal.aborted) return;
+				config.setList(config.extract(data));
+			} catch (err) {
+				if (ctrl.signal.aborted) return;
+				error = err instanceof Error ? err.message : 'Failed to load data';
+				config.setList([]);
+			} finally {
+				if (!ctrl.signal.aborted) config.setLoading(false);
+			}
+		};
 	}
 
-	async function loadPendingWaivers(leagueIds: string[]) {
-		if (leagueIds.length === 0) {
-			pendingWaivers = [];
-			return;
-		}
-		const thisLoad = ++waiverLoadId;
-		waiverLoading = true;
-		error = null;
-		try {
-			const res = await fetch(
-				`/api/mfl?type=pendingWaivers&league=${leagueIds.join(',')}`
-			);
-			if (thisLoad !== waiverLoadId) return;
-			const data = await res.json();
-			if (data.error) {
-				throw new Error(data.error);
-			}
-			pendingWaivers = data.pendingWaivers || [];
-		} catch (err) {
-			if (thisLoad !== waiverLoadId) return;
-			error =
-				err instanceof Error ? err.message : 'Failed to load pending waivers';
-			pendingWaivers = [];
-		} finally {
-			if (thisLoad === waiverLoadId) waiverLoading = false;
-		}
-	}
+	const loadTransactions = createTabLoader<
+		{ transactions: MFLTransaction[] },
+		MFLTransaction
+	>({
+		buildUrl: (leagueIds) =>
+			`/api/mfl?type=transactions&league=${leagueIds.join(',')}&days=${selectedDays}&includeTrades=${showTrades}`,
+		extract: (data) => data.transactions || [],
+		setList: (list) => (transactions = list),
+		setLoading: (v) => (loading = v)
+	});
 
-	async function loadFreeAgents(leagueIds: string[]) {
-		if (leagueIds.length === 0) {
-			freeAgents = [];
-			return;
-		}
-		const thisLoad = ++freeAgentLoadId;
-		freeAgentLoading = true;
-		error = null;
-		try {
-			const res = await fetch(
-				`/api/mfl?type=freeAgents&league=${leagueIds.join(',')}`
-			);
-			if (thisLoad !== freeAgentLoadId) return;
-			const data = await res.json();
-			if (data.error) {
-				throw new Error(data.error);
-			}
-			freeAgents = data.freeAgents || [];
-		} catch (err) {
-			if (thisLoad !== freeAgentLoadId) return;
-			error = err instanceof Error ? err.message : 'Failed to load free agents';
-			freeAgents = [];
-		} finally {
-			if (thisLoad === freeAgentLoadId) freeAgentLoading = false;
-		}
-	}
+	const loadPendingWaivers = createTabLoader<
+		{ pendingWaivers: MFLPendingWaiver[] },
+		MFLPendingWaiver
+	>({
+		buildUrl: (leagueIds) =>
+			`/api/mfl?type=pendingWaivers&league=${leagueIds.join(',')}`,
+		extract: (data) => data.pendingWaivers || [],
+		setList: (list) => (pendingWaivers = list),
+		setLoading: (v) => (waiverLoading = v)
+	});
+
+	const loadFreeAgents = createTabLoader<{ freeAgents: Player[] }, Player>({
+		buildUrl: (leagueIds) =>
+			`/api/mfl?type=freeAgents&league=${leagueIds.join(',')}`,
+		extract: (data) => data.freeAgents || [],
+		setList: (list) => (freeAgents = list),
+		setLoading: (v) => (freeAgentLoading = v)
+	});
 
 	function leagueName(leagueId: string): string {
 		return leagues.find((l) => l.id === leagueId)?.name ?? leagueId;
@@ -411,7 +392,7 @@
 					{:else if sortedTransactions.length > 0}
 						<div class="transactions-wrapper">
 							<div class="transactions-list">
-								{#each sortedTransactions as transaction, i (`${transaction.id ?? i}-${transaction.week ?? i}-${transaction.type ?? i}`)}
+								{#each sortedTransactions as transaction, i (`${transaction.leagueId ?? ''}-${transaction.id ?? i}-${transaction.week ?? i}-${transaction.type ?? i}`)}
 									<TransactionCard
 										{transaction}
 										{year}
