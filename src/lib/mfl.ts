@@ -4,6 +4,7 @@ import type {
 	MFLMyLeaguesResponse,
 	MFLPlayersResponse,
 	MFLTopOwnsResponse,
+	MFLTopOwnsPlayer,
 	MFLPendingWaiversResponse,
 	MFLPendingWaiverRequest,
 	MFLFreeAgentsResponse,
@@ -32,6 +33,21 @@ const playerCache = createTtlCache<Map<string, PlayerData>>(
 	msUntilNextCalendarDay()
 );
 
+let topOwnsCache: MFLTopOwnsPlayer[] | null = null;
+let topOwnsCacheDate = '';
+
+async function getTopOwns(cookie?: string): Promise<MFLTopOwnsPlayer[]> {
+	const today = new Date().toDateString();
+	if (topOwnsCache && topOwnsCacheDate === today) return topOwnsCache;
+	const baseUrl = await getBaseUrl();
+	const ownsUrl = `${baseUrl}?TYPE=topOwns&JSON=1&COUNT=10000`;
+	const response = await fetchJSON<MFLTopOwnsResponse>(ownsUrl, cookie);
+	const owns = response.topOwns?.player ? toArray(response.topOwns.player) : [];
+	topOwnsCache = owns;
+	topOwnsCacheDate = today;
+	return owns;
+}
+
 export async function getYearAndWeek(): Promise<{
 	year: string;
 	week: number;
@@ -40,6 +56,8 @@ export async function getYearAndWeek(): Promise<{
 	if (cached) {
 		return { year: cached.year, week: cached.week };
 	}
+	// MFL's status endpoint is season-scoped (fflnetdynamic{year}); this URL
+	// must be updated when MFL rolls over to a new season.
 	const url =
 		'https://api.myfantasyleague.com/fflnetdynamic2026/mfl_status.json';
 	const response = await fetchJSON<{
@@ -173,7 +191,7 @@ export async function getLeagueFull(
 	}
 
 	const baseUrl = await getBaseUrl();
-	const url = `${baseUrl}?TYPE=league&L=${leagueId}&JSON=1`;
+	const url = `${baseUrl}?TYPE=league&L=${encodeURIComponent(leagueId)}&JSON=1`;
 
 	const franchiseMap = new Map<string, string>();
 
@@ -222,13 +240,12 @@ export async function loadPlayerCache(
 	playerCachePromise = (async () => {
 		const baseUrl = await getBaseUrl();
 		const playersUrl = `${baseUrl}?TYPE=players&JSON=1`;
-		const ownsUrl = `${baseUrl}?TYPE=topOwns&JSON=1&COUNT=10000`;
 		const adpUrl = `${baseUrl}?TYPE=adp&JSON=1`;
 		const playerCacheMap = new Map<string, PlayerData>();
 
 		const [playerRes, ownsRes, adpRes] = await Promise.allSettled([
 			fetchJSON<MFLPlayersResponse>(playersUrl, cookie),
-			fetchJSON<MFLTopOwnsResponse>(ownsUrl),
+			getTopOwns(cookie),
 			fetchJSON<MFLAdpResponse>(adpUrl)
 		]);
 
@@ -253,9 +270,8 @@ export async function loadPlayerCache(
 			});
 		}
 
-		if (ownsRes.status === 'fulfilled' && ownsRes.value.topOwns?.player) {
-			const owns = toArray(ownsRes.value.topOwns.player);
-			owns.forEach(({ id, percent }) => {
+		if (ownsRes.status === 'fulfilled') {
+			ownsRes.value.forEach(({ id, percent }) => {
 				const existing = playerCacheMap.get(id);
 				if (existing) {
 					existing.rosterPct = parseFloat(percent);
@@ -293,14 +309,8 @@ export async function loadPlayerCache(
 }
 
 export async function getTopRosteredPlayerIds(count = 1000): Promise<string[]> {
-	const baseUrl = await getBaseUrl();
-	const ownsUrl = `${baseUrl}?TYPE=topOwns&JSON=1&COUNT=10000`;
-
 	try {
-		const response = await fetchJSON<MFLTopOwnsResponse>(ownsUrl);
-		const owns = response.topOwns?.player
-			? toArray(response.topOwns.player)
-			: [];
+		const owns = await getTopOwns();
 		return owns.slice(0, count).map((p) => p.id);
 	} catch (error) {
 		console.error(`Fetch top owns failed: ${error}`);
@@ -314,7 +324,7 @@ export async function getTransactions(
 	days?: number
 ): Promise<MFLTransaction[]> {
 	const baseUrl = await getBaseUrl();
-	const base = `TYPE=transactions&L=${leagueId}&JSON=1`;
+	const base = `TYPE=transactions&L=${encodeURIComponent(leagueId)}&JSON=1`;
 
 	const timeParam = days ? `&DAYS=${days}` : '';
 
@@ -352,7 +362,7 @@ export async function getPendingWaivers(
 	cookie?: string
 ): Promise<MFLPendingWaiverRequest[]> {
 	const baseUrl = await getBaseUrl();
-	const url = `${baseUrl}?TYPE=pendingWaivers&L=${leagueId}&JSON=1`;
+	const url = `${baseUrl}?TYPE=pendingWaivers&L=${encodeURIComponent(leagueId)}&JSON=1`;
 
 	try {
 		const response = await fetchJSON<MFLPendingWaiversResponse>(url, cookie);
@@ -371,7 +381,7 @@ export async function getFreeAgents(
 	cookie?: string
 ): Promise<MFLFreeAgentRaw[]> {
 	const baseUrl = await getBaseUrl();
-	const url = `${baseUrl}?TYPE=freeAgents&L=${leagueId}&JSON=1`;
+	const url = `${baseUrl}?TYPE=freeAgents&L=${encodeURIComponent(leagueId)}&JSON=1`;
 
 	try {
 		const response = await fetchJSON<MFLFreeAgentsResponse>(url, cookie);

@@ -27,52 +27,47 @@
 <div
 	class="fa-card"
 	class:locked={fa.locked}
-	role="button"
-	tabindex="0"
-	aria-label={`View profile for ${fa.name}`}
-	onclick={() => onSelect(fa)}
-	onkeydown={(e) => {
-		if (e.key === 'Enter' || e.key === ' ') {
-			e.preventDefault();
-			onSelect(fa);
-		}
-	}}
+	class:has-avail={availableIn.length < selectedCount}
 >
-	<div class="fa-card-top">
-		<PlayerAvatar id={fa.id} position={fa.position} size="md" />
-		{#if fa.position}
-			<span class="position-badge" data-position={fa.position}
-				>{fa.position}</span
-			>
-		{/if}
-		<span class="player-name">{fa.name}</span>
-	</div>
-	<div class="fa-card-meta">
-		<TeamChip team={fa.team} />
-		{#if fa.rosterPct != null}
-			<span class="roster-badge">{fa.rosterPct.toFixed(1)}%</span>
-		{/if}
-		{#if adp}
-			<span class="adp-badge">ADP {adp}</span>
-		{/if}
-		{#if fa.locked}
-			<span class="fa-lock">Locked</span>
-		{/if}
-		{#if availableIn.length < selectedCount}
-			<button
-				type="button"
-				class="fa-avail"
-				onmouseenter={(e) => onAvailEnter(e, availableIn)}
-				onmouseleave={onAvailLeave}
-				onclick={(e) => {
-					e.stopPropagation();
-					onAvailToggle(e, availableIn);
-				}}
-			>
-				FA {availableIn.length}/{selectedCount}
-			</button>
-		{/if}
-	</div>
+	<button
+		type="button"
+		class="fa-card-main"
+		aria-label={`View profile for ${fa.name}`}
+		onclick={() => onSelect(fa)}
+	>
+		<div class="fa-card-top">
+			<PlayerAvatar id={fa.id} position={fa.position} size="md" />
+			{#if fa.position}
+				<span class="position-badge" data-position={fa.position}
+					>{fa.position}</span
+				>
+			{/if}
+			<span class="player-name">{fa.name}</span>
+		</div>
+		<div class="fa-card-meta">
+			<TeamChip team={fa.team} />
+			{#if fa.rosterPct != null}
+				<span class="roster-badge">{fa.rosterPct.toFixed(1)}%</span>
+			{/if}
+			{#if adp}
+				<span class="adp-badge">ADP {adp}</span>
+			{/if}
+			{#if fa.locked}
+				<span class="fa-lock">Locked</span>
+			{/if}
+		</div>
+	</button>
+	{#if availableIn.length < selectedCount}
+		<button
+			type="button"
+			class="fa-avail"
+			onmouseenter={(e) => onAvailEnter(e, availableIn)}
+			onmouseleave={onAvailLeave}
+			onclick={(e) => onAvailToggle(e, availableIn)}
+		>
+			FA {availableIn.length}/{selectedCount}
+		</button>
+	{/if}
 </div>
 
 <style>
@@ -85,7 +80,24 @@
 		transition: all 0.1s ease;
 		animation: fadeInUp 0.25s ease;
 		position: relative;
+	}
+
+	.fa-card-main {
+		display: block;
+		width: 100%;
+		text-align: left;
+		font: inherit;
+		color: inherit;
+		background: none;
+		border: none;
+		padding: 0;
+		margin: 0;
 		cursor: pointer;
+	}
+
+	.fa-card-main:focus-visible {
+		outline: 2px solid var(--highlight);
+		outline-offset: 2px;
 	}
 
 	.fa-card::before {
@@ -114,14 +126,12 @@
 		box-shadow: var(--card-shadow-hover);
 	}
 
-	.fa-card:focus-visible {
-		outline: 2px solid var(--highlight);
-		outline-offset: 2px;
-		cursor: pointer;
-	}
-
 	.fa-card.locked {
 		opacity: 0.6;
+	}
+
+	.fa-card.has-avail .fa-card-top {
+		padding-right: 4.5rem;
 	}
 
 	.fa-card-top {
@@ -162,6 +172,9 @@
 	}
 
 	.fa-avail {
+		position: absolute;
+		top: 0.95rem;
+		right: 0.75rem;
 		font-size: 0.65rem;
 		font-weight: 900;
 		color: var(--free-agent-color);
@@ -173,6 +186,11 @@
 		cursor: pointer;
 		text-transform: uppercase;
 		letter-spacing: 0.5px;
+	}
+
+	.fa-avail:hover {
+		background: var(--free-agent-color);
+		color: var(--bg-secondary);
 	}
 
 	@media (max-width: 768px) {
