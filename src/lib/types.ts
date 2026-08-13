@@ -1,35 +1,20 @@
-export interface MFLLeague {
-	id: string;
-	name: string;
-}
-
-export interface PlayerInfo {
-	name: string;
-	position: string;
-	team?: string;
-	rosterPct?: number;
-}
-
-export interface PlayerData extends PlayerInfo {
-	adp?: string;
-}
-
-export interface MFLPlayer {
-	id: string;
-	name: string;
-	position: string;
-	salary?: string;
-	contractYear?: string;
-	cant_add?: string;
-	locked?: string;
-}
-
-export interface TransactionPlayer {
+export interface Player {
 	id: string;
 	name: string;
 	position?: string;
 	team?: string;
 	rosterPct?: number;
+	adp?: string;
+	availableIn?: string[];
+	locked?: boolean;
+}
+
+export interface PlayerData {
+	name: string;
+	position: string;
+	team?: string;
+	rosterPct?: number;
+	adp?: string;
 }
 
 export interface MFLTopOwnsPlayer {
@@ -57,8 +42,8 @@ export interface MFLTransaction {
 	playerNames?: string[];
 	franchiseName?: string;
 	tradePartnerName?: string;
-	tradeGives?: TransactionPlayer[];
-	tradeReceives?: TransactionPlayer[];
+	tradeGives?: Player[];
+	tradeReceives?: Player[];
 	transaction?: string;
 	franchise1_gave_up?: string;
 	franchise2_gave_up?: string;
@@ -66,8 +51,8 @@ export interface MFLTransaction {
 	timestamp?: string;
 	expires?: string;
 	formattedTime?: string;
-	addedPlayers?: TransactionPlayer[];
-	droppedPlayers?: TransactionPlayer[];
+	addedPlayers?: Player[];
+	droppedPlayers?: Player[];
 	maxRosterPct?: number;
 	leagueId?: string;
 	leagueName?: string;
@@ -117,16 +102,6 @@ export interface MFLFreeAgentsResponse {
 	};
 }
 
-export interface MFLFreeAgent {
-	id: string;
-	name: string;
-	position?: string;
-	team?: string;
-	rosterPct?: number;
-	locked?: boolean;
-	availableIn: string[];
-}
-
 export interface StoredLeague {
 	id: string;
 	name: string;
@@ -147,11 +122,6 @@ export interface MFLLeagueResponse {
 	};
 }
 
-export interface MFLLoginResponse {
-	success: boolean;
-	cookie: string;
-}
-
 export interface MFLPendingWaiverRequest {
 	franchise?: string;
 	comments: string;
@@ -170,8 +140,8 @@ export interface ParsedWaiverClaim {
 	playerId: string;
 	bid: string;
 	dropPlayerId?: string;
-	addedPlayer?: TransactionPlayer;
-	droppedPlayer?: TransactionPlayer;
+	addedPlayer?: Player;
+	droppedPlayer?: Player;
 }
 
 export interface MFLPendingWaiver {
@@ -220,19 +190,4 @@ export interface MFLAdpResponse {
 	adp: {
 		player: MFLAdpPlayer | MFLAdpPlayer[];
 	};
-}
-
-export interface MFLPlayerProfileResponse {
-	playerProfile: MFLPlayerProfile;
-	version: string;
-	encoding: string;
-}
-
-export interface ProfilePlayer {
-	id: string;
-	name: string;
-	position?: string;
-	team?: string;
-	rosterPct?: number;
-	availableIn?: string[];
 }

@@ -1,18 +1,14 @@
 <script lang="ts">
 	import PlayerAvatar from './PlayerAvatar.svelte';
 	import TeamChip from './TeamChip.svelte';
-	import type {
-		MFLPlayerNewsArticle,
-		MFLPlayerProfile,
-		ProfilePlayer
-	} from './types';
+	import type { MFLPlayerNewsArticle, MFLPlayerProfile, Player } from './types';
 
 	let {
 		player,
 		year,
 		onclose
 	}: {
-		player: ProfilePlayer | null;
+		player: Player | null;
 		year?: string;
 		onclose: () => void;
 	} = $props();

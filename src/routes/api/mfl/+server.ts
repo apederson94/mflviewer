@@ -18,7 +18,7 @@ import {
 import type {
 	MFLTransaction,
 	MFLPendingWaiver,
-	MFLFreeAgent,
+	Player,
 	ParsedWaiverClaim,
 	PlayerData
 } from '$lib/types';
@@ -493,7 +493,7 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
 					}
 				}
 
-				const freeAgents: MFLFreeAgent[] = [...unionMap.values()].map((p) => ({
+				const freeAgents: Player[] = [...unionMap.values()].map((p) => ({
 					id: p.id,
 					name: getPlayerName(players, p.id),
 					position: getPlayerPosition(players, p.id)?.toUpperCase(),

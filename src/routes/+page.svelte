@@ -1,12 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import type { PageData } from './$types';
-	import type {
-		MFLTransaction,
-		MFLPendingWaiver,
-		MFLFreeAgent,
-		ProfilePlayer
-	} from '$lib';
+	import type { MFLTransaction, MFLPendingWaiver, Player } from '$lib';
 	import PlayerAvatar from '$lib/PlayerAvatar.svelte';
 	import TeamChip from '$lib/TeamChip.svelte';
 	import PlayerRow from '$lib/PlayerRow.svelte';
@@ -38,7 +33,7 @@
 	);
 	let pendingWaivers = $state<MFLPendingWaiver[]>([]);
 	let waiverLoading = $state(false);
-	let freeAgents = $state<MFLFreeAgent[]>([]);
+	let freeAgents = $state<Player[]>([]);
 	let freeAgentLoading = $state(false);
 	let faPosition = $state('ALL');
 	let faSearch = $state('');
@@ -48,9 +43,9 @@
 	let waiverLoadId = 0;
 	let freeAgentLoadId = 0;
 
-	let profilePlayer = $state<ProfilePlayer | null>(null);
+	let profilePlayer = $state<Player | null>(null);
 
-	function openProfile(player: ProfilePlayer) {
+	function openProfile(player: Player) {
 		profilePlayer = player;
 	}
 
@@ -983,12 +978,12 @@
 										{#if fa.locked}
 											<span class="fa-lock">Locked</span>
 										{/if}
-										{#if fa.availableIn.length < selectedCount}
+										{#if (fa.availableIn?.length ?? 0) < selectedCount}
 											<button
 												type="button"
 												class="fa-avail"
 												onmouseenter={(e) =>
-													showAvailTooltip(e, fa.availableIn)}
+													showAvailTooltip(e, fa.availableIn ?? [])}
 												onmouseleave={hideAvailTooltip}
 												onclick={(e) => {
 													e.stopPropagation();
@@ -998,11 +993,11 @@
 													) {
 														hideAvailTooltip();
 													} else {
-														showAvailTooltip(e, fa.availableIn);
+														showAvailTooltip(e, fa.availableIn ?? []);
 													}
 												}}
 											>
-												FA {fa.availableIn.length}/{selectedCount}
+												FA {fa.availableIn?.length ?? 0}/{selectedCount}
 											</button>
 										{/if}
 									</div>

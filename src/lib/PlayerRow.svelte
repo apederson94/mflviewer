@@ -2,7 +2,7 @@
 	import PlayerAvatar from './PlayerAvatar.svelte';
 	import TeamChip from './TeamChip.svelte';
 	import { isRealPlayerId } from './playerProfiles';
-	import type { ProfilePlayer } from './types';
+	import type { Player } from './types';
 
 	let {
 		id,
@@ -19,7 +19,7 @@
 		name: string;
 		rosterPct?: number;
 		adp?: string;
-		onSelect?: (player: ProfilePlayer) => void;
+		onSelect?: (player: Player) => void;
 	} = $props();
 
 	const adpValue = $derived(adp?.trim() || '');
