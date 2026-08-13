@@ -67,10 +67,10 @@ export function formatDraftPick(pickId: string, currentYear?: string): string {
 		return `${year} ${roundStr} Round Pick`;
 	}
 
-	const dpMatch = pickId.match(/^DP_(\d+)_(\d+)$/);
+	const dpMatch = pickId.match(/^DP_(?<round>\d+)_(?<pick>\d+)$/);
 	if (dpMatch) {
-		const round = parseInt(dpMatch[1], 10) + 1;
-		const pick = parseInt(dpMatch[2], 10) + 1;
+		const round = parseInt(dpMatch.groups?.['round'] ?? '0', 10) + 1;
+		const pick = parseInt(dpMatch.groups?.['pick'] ?? '0', 10) + 1;
 		return (
 			currentYr +
 			' Draft Pick ' +
@@ -348,10 +348,10 @@ export function enrichPendingWaivers(
 				});
 
 			const allPlayers = claims.flatMap((c) =>
-				[c.addedPlayer, c.droppedPlayer].filter(Boolean)
+				[c.addedPlayer, c.droppedPlayer].filter((p): p is Player => Boolean(p))
 			);
 			const maxRosterPct = Math.max(
-				...allPlayers.map((p) => p!.rosterPct ?? 0),
+				...allPlayers.map((p) => p.rosterPct ?? 0),
 				0
 			);
 			const commentsFormatted = w.comments.replace(/br\//g, '\n');

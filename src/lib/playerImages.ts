@@ -84,7 +84,7 @@ export async function warmPlayerImages(
 
 		async function worker(): Promise<void> {
 			while (index < queue.length) {
-				const id = queue[index++];
+				const id = queue[index++]!;
 				await getPlayerImage(id);
 				if (delayMs > 0)
 					await new Promise((resolve) => setTimeout(resolve, delayMs));

@@ -238,12 +238,12 @@ describe('enrichTransactions', () => {
 			}
 		];
 
-		const [t] = enrichTransactions(
+		const t = enrichTransactions(
 			[result(transactions)],
 			players,
 			'2026',
 			true
-		);
+		)[0]!;
 
 		expect(t.type).toBe('Trade');
 		expect(t.franchiseName).toBe('Team One');
@@ -267,12 +267,12 @@ describe('enrichTransactions', () => {
 			}
 		];
 
-		const [t] = enrichTransactions(
+		const t = enrichTransactions(
 			[result(transactions)],
 			players,
 			'2026',
 			true
-		);
+		)[0]!;
 
 		expect(t.type).toBe('Add/Drop');
 		expect(t.addedPlayers?.map((p) => p.id)).toEqual(['1111']);
@@ -293,12 +293,12 @@ describe('enrichTransactions', () => {
 			}
 		];
 
-		const [t] = enrichTransactions(
+		const t = enrichTransactions(
 			[result(transactions)],
 			players,
 			'2026',
 			true
-		);
+		)[0]!;
 
 		expect(t.type).toBe('Waiver');
 		expect(t.bid).toBe('500');
@@ -333,7 +333,7 @@ describe('enrichTransactions', () => {
 		);
 
 		expect(enriched).toHaveLength(1);
-		expect(enriched[0].id).toBe('t2');
+		expect(enriched[0]!.id).toBe('t2');
 	});
 
 	it('sorts by roster pct desc, then timestamp desc', () => {
@@ -388,14 +388,15 @@ describe('enrichPendingWaivers', () => {
 			}
 		];
 
-		const [w] = enrichPendingWaivers([result(waivers)], players);
+		const w = enrichPendingWaivers([result(waivers)], players)[0]!;
 
 		expect(w.franchiseName).toBe('Team One');
 		expect(w.leagueId).toBe('L1');
 		expect(w.commentsFormatted).toBe('line1\nline2');
 		expect(w.claims).toHaveLength(2);
 
-		const [withDrop, playerOnly] = w.claims;
+		const withDrop = w.claims[0]!;
+		const playerOnly = w.claims[1]!;
 		expect(withDrop.playerId).toBe('1111');
 		expect(withDrop.bid).toBe('100');
 		expect(withDrop.dropPlayerId).toBe('2222');
@@ -417,7 +418,7 @@ describe('enrichPendingWaivers', () => {
 			}
 		];
 
-		const [w] = enrichPendingWaivers([result(waivers)], players);
+		const w = enrichPendingWaivers([result(waivers)], players)[0]!;
 
 		expect(w.franchiseName).toBe('Your Team');
 	});
@@ -440,10 +441,12 @@ describe('enrichPendingWaivers', () => {
 			}
 		];
 
-		const [top, bottom] = enrichPendingWaivers([result(waivers)], players);
+		const enriched = enrichPendingWaivers([result(waivers)], players);
+		const top = enriched[0]!;
+		const bottom = enriched[1]!;
 
-		expect(top.claims[0].addedPlayer?.name).toBe('Player C');
-		expect(bottom.claims[0].addedPlayer?.name).toBe('Player A');
+		expect(top.claims[0]!.addedPlayer?.name).toBe('Player C');
+		expect(bottom.claims[0]!.addedPlayer?.name).toBe('Player A');
 	});
 });
 
@@ -466,15 +469,15 @@ describe('enrichFreeAgents', () => {
 		const freeAgents = enrichFreeAgents(results, players);
 
 		const byId = new Map(freeAgents.map((p) => [p.id, p]));
-		expect(byId.get('1111')).toMatchObject({
+		expect(byId.get('1111')!).toMatchObject({
 			locked: true,
 			availableIn: ['L1']
 		});
-		expect(byId.get('2222')).toMatchObject({
+		expect(byId.get('2222')!).toMatchObject({
 			locked: false,
 			availableIn: ['L1', 'L2']
 		});
-		expect(byId.get('3333')).toMatchObject({
+		expect(byId.get('3333')!).toMatchObject({
 			locked: false,
 			availableIn: ['L2']
 		});
@@ -486,7 +489,7 @@ describe('enrichFreeAgents', () => {
 			result('L2', [{ id: '2222' }])
 		];
 
-		const [fa] = enrichFreeAgents(results, players);
+		const fa = enrichFreeAgents(results, players)[0]!;
 
 		expect(fa.locked).toBe(true);
 	});
@@ -508,7 +511,7 @@ describe('enrichFreeAgents', () => {
 	it('enriches player metadata', () => {
 		const results = [result('L1', [{ id: '2222' }])];
 
-		const [fa] = enrichFreeAgents(results, players);
+		const fa = enrichFreeAgents(results, players)[0]!;
 
 		expect(fa).toMatchObject({
 			id: '2222',

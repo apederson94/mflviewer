@@ -12,8 +12,8 @@ export async function fetchJson<T>(
 		);
 	}
 	const error =
-		data && typeof (data as Record<string, unknown>).error === 'string'
-			? ((data as Record<string, unknown>).error as string)
+		data && typeof (data as Record<string, unknown>)['error'] === 'string'
+			? ((data as Record<string, unknown>)['error'] as string)
 			: undefined;
 	if (!res.ok || error) {
 		throw new Error(error ?? `Request failed (${res.status})`);
