@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import { dev } from '$app/environment';
 import type { RequestHandler } from './$types';
-import { login, MFL_COOKIE_NAME } from '$lib/api';
+import { login, MFL_COOKIE_NAME } from '$lib/mfl';
 
 export const POST: RequestHandler = async ({ request, cookies }) => {
 	const formData = await request.formData();

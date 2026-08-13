@@ -13,7 +13,7 @@ import type {
 	MFLAdpResponse,
 	PlayerData
 } from './types';
-
+import { createTtlCache, msUntilNextCalendarDay } from './cache';
 import { resetImageCacheIfStale } from './playerImages';
 
 export const MFL_COOKIE_NAME = 'mfl_cookie';
@@ -22,67 +22,35 @@ function toArray<T>(item: T | T[]): T[] {
 	return Array.isArray(item) ? item : [item];
 }
 
-interface YearWeekCache {
-	year: string;
-	week: number;
-	timestamp: number;
-}
-
-let yearWeekCache: YearWeekCache | null = null;
-
-interface LeagueFullCacheEntry {
-	league: LeagueFull;
-	timestamp: number;
-}
-
-const leagueFullCache = new Map<string, LeagueFullCacheEntry>();
 const LEAGUE_CACHE_TTL_MS = 60 * 60 * 1000;
 
-interface PlayerCache {
-	players: Map<string, PlayerData>;
-	timestamp: number;
-}
-
-let playerCache: PlayerCache | null = null;
-
-function isCacheValid(cache: YearWeekCache | null): boolean {
-	if (!cache) return false;
-	const now = new Date();
-	const cacheDate = new Date(cache.timestamp);
-	return now.toDateString() === cacheDate.toDateString();
-}
-
-function isPlayerCacheValid(): boolean {
-	if (!playerCache) return false;
-	const now = new Date();
-	const cacheDate = new Date(playerCache.timestamp);
-	const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-	const cacheDay = new Date(
-		cacheDate.getFullYear(),
-		cacheDate.getMonth(),
-		cacheDate.getDate()
-	);
-	return today.getTime() === cacheDay.getTime();
-}
+const yearWeekCache = createTtlCache<{ year: string; week: number }>(
+	msUntilNextCalendarDay()
+);
+const leagueFullCache = createTtlCache<LeagueFull>(LEAGUE_CACHE_TTL_MS);
+const playerCache = createTtlCache<Map<string, PlayerData>>(
+	msUntilNextCalendarDay()
+);
 
 export async function getYearAndWeek(): Promise<{
 	year: string;
 	week: number;
 }> {
-	if (isCacheValid(yearWeekCache)) {
-		return { year: yearWeekCache!.year, week: yearWeekCache!.week };
+	const cached = yearWeekCache.get('current');
+	if (cached) {
+		return { year: cached.year, week: cached.week };
 	}
 	const url =
 		'https://api.myfantasyleague.com/fflnetdynamic2026/mfl_status.json';
 	const response = await fetchJSON<{
 		mfl_status: { year: string; weeks: { CurrentWeek: string } };
 	}>(url);
-	yearWeekCache = {
+	const value = {
 		year: response.mfl_status.year,
-		week: parseInt(response.mfl_status.weeks.CurrentWeek || '1', 10),
-		timestamp: Date.now()
+		week: parseInt(response.mfl_status.weeks.CurrentWeek || '1', 10)
 	};
-	return { year: yearWeekCache.year, week: yearWeekCache.week };
+	yearWeekCache.set('current', value, msUntilNextCalendarDay());
+	return value;
 }
 
 export async function getCurrentYear(): Promise<string> {
@@ -200,8 +168,8 @@ export async function getLeagueFull(
 	cookie?: string
 ): Promise<LeagueFull | null> {
 	const cached = leagueFullCache.get(leagueId);
-	if (cached && Date.now() - cached.timestamp < LEAGUE_CACHE_TTL_MS) {
-		return cached.league;
+	if (cached) {
+		return cached;
 	}
 
 	const baseUrl = await getBaseUrl();
@@ -228,7 +196,7 @@ export async function getLeagueFull(
 			franchises: franchiseMap
 		};
 
-		leagueFullCache.set(leagueIdVal, { league, timestamp: Date.now() });
+		leagueFullCache.set(leagueIdVal, league);
 
 		return league;
 	} catch (error) {
@@ -242,8 +210,9 @@ let playerCachePromise: Promise<Map<string, PlayerData>> | null = null;
 export async function loadPlayerCache(
 	cookie?: string
 ): Promise<Map<string, PlayerData>> {
-	if (isPlayerCacheValid() && playerCache) {
-		return playerCache.players;
+	const cached = playerCache.get('current');
+	if (cached) {
+		return cached;
 	}
 
 	if (playerCachePromise) {
@@ -311,10 +280,7 @@ export async function loadPlayerCache(
 			});
 		}
 
-		playerCache = {
-			players: playerCacheMap,
-			timestamp: Date.now()
-		};
+		playerCache.set('current', playerCacheMap);
 
 		resetImageCacheIfStale();
 
@@ -340,80 +306,6 @@ export async function getTopRosteredPlayerIds(count = 1000): Promise<string[]> {
 		console.error(`Fetch top owns failed: ${error}`);
 		return [];
 	}
-}
-
-export function getPlayerName(
-	playerCache: Map<string, PlayerData>,
-	playerId: string
-): string {
-	const player = playerCache.get(playerId);
-	return player?.name || `Unknown (${playerId})`;
-}
-
-export function getPlayerPosition(
-	playerCache: Map<string, PlayerData>,
-	playerId: string
-): string {
-	const player = playerCache.get(playerId);
-	return player?.position || 'UNK';
-}
-
-export function getFranchiseName(
-	franchiseCache: Map<string, string>,
-	franchiseId: string
-): string {
-	return franchiseCache.get(franchiseId) || `Franchise ${franchiseId}`;
-}
-
-export function formatDraftPick(pickId: string, currentYear?: string): string {
-	const currentYr = currentYear || new Date().getFullYear().toString();
-
-	const fpMatch = pickId.match(/^FP_(\d{4})_(\d{4})_(\d+)$/);
-	if (fpMatch) {
-		const [, , year, round] = fpMatch;
-		const roundStr =
-			round === '1'
-				? '1st'
-				: round === '2'
-					? '2nd'
-					: round === '3'
-						? '3rd'
-						: `${round}th`;
-		return `${year} ${roundStr} Round Pick`;
-	}
-
-	const dpMatch = pickId.match(/^DP_(\d+)_(\d+)$/);
-	if (dpMatch) {
-		const round = parseInt(dpMatch[1], 10) + 1;
-		const pick = parseInt(dpMatch[2], 10) + 1;
-		return (
-			currentYr +
-			' Draft Pick ' +
-			round +
-			'.' +
-			pick.toString().padStart(2, '0')
-		);
-	}
-
-	return pickId;
-}
-
-export function formatFaab(id: string): string {
-	const amount = id.replace(/^BB_/, '');
-	return `FAAB $${amount}`;
-}
-
-export function formatTimestamp(timestamp: string): string {
-	if (!timestamp) return '';
-	const date = new Date(parseInt(timestamp, 10) * 1000);
-	return date.toLocaleString('en-US', {
-		month: 'short',
-		day: 'numeric',
-		year: 'numeric',
-		hour: 'numeric',
-		minute: '2-digit',
-		hour12: true
-	});
 }
 
 export async function getTransactions(

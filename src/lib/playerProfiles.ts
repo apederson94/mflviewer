@@ -1,4 +1,4 @@
-import { fetchJSON, getBaseUrl, loadPlayerCache } from './api';
+import { fetchJSON, getBaseUrl, loadPlayerCache } from './mfl';
 import type { MFLPlayerProfile } from './types';
 
 const profileCache = new Map<string, MFLPlayerProfile>();

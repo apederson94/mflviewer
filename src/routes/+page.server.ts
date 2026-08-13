@@ -6,7 +6,7 @@ import {
 	loadPlayerCache,
 	getTopRosteredPlayerIds,
 	MFL_COOKIE_NAME
-} from '$lib/api';
+} from '$lib/mfl';
 import { isImageCacheValid, warmPlayerImages } from '$lib/playerImages';
 
 export const config = {
