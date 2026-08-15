@@ -545,24 +545,42 @@ export async function getFranchiseRoster(
 	cookie?: string,
 	leagueHost?: string
 ): Promise<MFLRosterPlayer[]> {
-	const base = leagueHost ? `${leagueHost}/export` : await getBaseUrl();
-	const url = `${base}?TYPE=rosters&L=${encodeURIComponent(
-		leagueId
-	)}&JSON=1&FRANCHISE=${encodeURIComponent(franchiseId)}`;
-
-	try {
-		const response = await fetchJSON<MFLRostersResponse>(url, cookie);
-		const franchises = response.rosters?.franchise
-			? toArray(response.rosters.franchise)
-			: [];
-		const roster =
-			franchises.find((franchise) => franchise.id === franchiseId) ||
-			franchises[0];
-		return roster?.player ? toArray(roster.player) : [];
-	} catch (error) {
-		console.error(`Fetch roster for league ${leagueId} failed: ${error}`);
-		throw error;
+	const key = `${leagueHost ?? ''}:${leagueId}:${franchiseId}`;
+	const cached = franchiseRosterCache.get(key);
+	if (cached) {
+		return cached;
 	}
+	if (franchiseRosterPromises.has(key)) {
+		return franchiseRosterPromises.get(key)!;
+	}
+
+	const promise = (async () => {
+		const base = leagueHost ? `${leagueHost}/export` : await getBaseUrl();
+		const url = `${base}?TYPE=rosters&L=${encodeURIComponent(
+			leagueId
+		)}&JSON=1&FRANCHISE=${encodeURIComponent(franchiseId)}`;
+
+		try {
+			const response = await fetchJSON<MFLRostersResponse>(url, cookie);
+			const franchises = response.rosters?.franchise
+				? toArray(response.rosters.franchise)
+				: [];
+			const roster =
+				franchises.find((franchise) => franchise.id === franchiseId) ||
+				franchises[0];
+			const players = roster?.player ? toArray(roster.player) : [];
+			franchiseRosterCache.set(key, players, msUntilNextCalendarDay());
+			return players;
+		} catch (error) {
+			console.error(`Fetch roster for league ${leagueId} failed: ${error}`);
+			throw error;
+		} finally {
+			franchiseRosterPromises.delete(key);
+		}
+	})();
+
+	franchiseRosterPromises.set(key, promise);
+	return promise;
 }
 
 export async function getPlayerRosterStatus(
@@ -633,6 +651,19 @@ const actionContextCache = createTtlCache<PlayerActionLeague>(60 * 1000);
 
 export function bustActionContextCache(): void {
 	actionContextCache.clear();
+}
+
+const franchiseRosterCache = createTtlCache<MFLRosterPlayer[]>(
+	msUntilNextCalendarDay()
+);
+const franchiseRosterPromises = new Map<string, Promise<MFLRosterPlayer[]>>();
+
+export function bustRosterCache(leagueId?: string): void {
+	for (const key of franchiseRosterCache.keys()) {
+		if (leagueId && !key.includes(`:${leagueId}:`)) continue;
+		franchiseRosterCache.delete(key);
+		franchiseRosterPromises.delete(key);
+	}
 }
 
 export async function getActionContext(

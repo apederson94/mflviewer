@@ -5,7 +5,8 @@ import type {
 	MFLFreeAgentRaw,
 	Player,
 	PlayerData,
-	ParsedWaiverClaim
+	ParsedWaiverClaim,
+	Exposure
 } from './types';
 
 export interface LeagueTransactionsResult {
@@ -417,4 +418,17 @@ export function enrichFreeAgents(
 	});
 
 	return freeAgents;
+}
+
+export function computeExposure(
+	ownedLeagueIds: string[],
+	allLeagueIds: string[]
+): Exposure {
+	const owned = new Set(ownedLeagueIds).size;
+	const total = new Set(allLeagueIds).size;
+	return {
+		owned,
+		total,
+		pct: total > 0 ? (owned / total) * 100 : 0
+	};
 }

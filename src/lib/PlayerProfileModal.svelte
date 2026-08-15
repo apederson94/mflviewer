@@ -10,7 +10,8 @@
 		PlayerActionContext,
 		PlayerActionLeague,
 		ActionRequest,
-		ActionResult
+		ActionResult,
+		Exposure
 	} from './types';
 
 	let {
@@ -77,6 +78,7 @@
 	let actionsLoading = $state(false);
 	let actionError = $state<string | null>(null);
 	let actionContext = $state<PlayerActionLeague[]>([]);
+	let exposure = $state<Exposure | null>(null);
 
 	interface LeagueForm {
 		bid: string;
@@ -91,9 +93,11 @@
 	$effect(() => {
 		if (!player) return;
 		load();
+		loadActions();
 		activeTab = 'profile';
 		actionsLoaded = false;
 		actionContext = [];
+		exposure = null;
 		forms = {};
 		closeBtn?.focus();
 
@@ -153,6 +157,7 @@
 				)}`
 			);
 			actionContext = data.leagues;
+			exposure = data.exposure ?? null;
 			initForms(data.leagues);
 			actionsLoaded = true;
 		} catch (err) {
@@ -381,6 +386,13 @@
 					<TeamChip team={player.team} />
 					{#if player.rosterPct != null}
 						<span class="roster-badge">{player.rosterPct.toFixed(1)}%</span>
+					{/if}
+					{#if exposure && exposure.total > 0}
+						<span
+							class="exposure-badge"
+							title={`Owned in ${exposure.owned} of ${exposure.total} leagues`}
+							>Exp {exposure.pct.toFixed(0)}% ({exposure.owned}/{exposure.total})</span
+						>
 					{/if}
 				</span>
 			</div>
@@ -860,6 +872,19 @@
 
 	.profile-retry:hover {
 		color: var(--text-primary);
+	}
+
+	.exposure-badge {
+		font-size: var(--badge-font-size);
+		font-weight: var(--badge-font-weight);
+		color: var(--on-highlight);
+		background: var(--highlight);
+		border: 1px solid var(--border);
+		border-radius: 0;
+		padding: var(--badge-padding);
+		white-space: nowrap;
+		text-transform: uppercase;
+		letter-spacing: var(--badge-letter-spacing);
 	}
 
 	.profile-stats {

@@ -9,6 +9,7 @@ import {
 	enrichFreeAgents,
 	enrichPendingWaivers,
 	enrichTransactions,
+	computeExposure,
 	formatDraftPick,
 	formatFaab,
 	formatTimestamp,
@@ -93,6 +94,46 @@ describe('formatFaab', () => {
 
 	it('returns just the amount for a bare id', () => {
 		expect(formatFaab('BB_0')).toBe('FAAB $0');
+	});
+});
+
+describe('computeExposure', () => {
+	it('computes partial exposure across leagues', () => {
+		expect(computeExposure(['L1'], ['L1', 'L2'])).toEqual({
+			owned: 1,
+			total: 2,
+			pct: 50
+		});
+	});
+
+	it('computes full exposure', () => {
+		expect(computeExposure(['L1', 'L2'], ['L1', 'L2'])).toEqual({
+			owned: 2,
+			total: 2,
+			pct: 100
+		});
+	});
+
+	it('returns zero for no ownership', () => {
+		expect(computeExposure([], ['L1', 'L2'])).toEqual({
+			owned: 0,
+			total: 2,
+			pct: 0
+		});
+	});
+
+	it('returns zeroes for no leagues', () => {
+		expect(computeExposure([], [])).toEqual({ owned: 0, total: 0, pct: 0 });
+	});
+
+	it('dedupes duplicate league ids', () => {
+		expect(
+			computeExposure(['L1', 'L1', 'L2'], ['L1', 'L1', 'L2', 'L3'])
+		).toEqual({
+			owned: 2,
+			total: 3,
+			pct: (2 / 3) * 100
+		});
 	});
 });
 

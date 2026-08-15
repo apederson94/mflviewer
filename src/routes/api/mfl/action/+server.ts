@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import {
 	bustActionContextCache,
+	bustRosterCache,
 	getLeagueFull,
 	getMyLeagues,
 	getPendingWaivers,
@@ -169,6 +170,7 @@ export const POST: RequestHandler = async ({ cookies, request }) => {
 
 		if (result.success) {
 			bustActionContextCache();
+			if (!isBbid) bustRosterCache(leagueId);
 			return json({
 				success: true,
 				message: isBbid ? 'Bid submitted' : 'Player added'

@@ -6,6 +6,8 @@ interface CacheEntry<T> {
 export interface TtlCache<T> {
 	get(key: string): T | undefined;
 	set(key: string, value: T, ttlMs?: number): void;
+	delete(key: string): void;
+	keys(): string[];
 	clear(): void;
 }
 
@@ -26,11 +28,19 @@ export function createTtlCache<T>(defaultTtlMs: number): TtlCache<T> {
 		store.set(key, { value, expiresAt: Date.now() + ttlMs });
 	}
 
+	function deleteKey(key: string): void {
+		store.delete(key);
+	}
+
+	function keys(): string[] {
+		return [...store.keys()];
+	}
+
 	function clear(): void {
 		store.clear();
 	}
 
-	return { get, set, clear };
+	return { get, set, delete: deleteKey, keys, clear };
 }
 
 export function msUntilNextCalendarDay(now = new Date()): number {

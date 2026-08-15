@@ -296,6 +296,7 @@ export interface PlayerActionLeague {
 
 export interface PlayerActionContext {
 	leagues: PlayerActionLeague[];
+	exposure?: Exposure;
 }
 
 export interface WaiverManagerClaim {
@@ -346,4 +347,10 @@ export interface ActionResult {
 	success: boolean;
 	message?: string;
 	error?: string;
+}
+
+export interface Exposure {
+	owned: number;
+	total: number;
+	pct: number;
 }

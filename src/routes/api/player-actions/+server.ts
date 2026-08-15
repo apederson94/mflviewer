@@ -1,7 +1,8 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getActionContext, loadPlayerCache, MFL_COOKIE_NAME } from '$lib/mfl';
-import type { PlayerActionLeague } from '$lib/types';
+import { computeExposure } from '$lib/enrichment';
+import type { Exposure, PlayerActionLeague } from '$lib/types';
 
 export const GET: RequestHandler = async ({ cookies, url }) => {
 	const cookie = cookies.get(MFL_COOKIE_NAME);
@@ -35,7 +36,16 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
 		if (leagues.length === 0) {
 			return json({ error: 'Failed to load action context' }, { status: 502 });
 		}
-		const response: { leagues: PlayerActionLeague[] } = { leagues };
+		const ownedLeagueIds = leagues
+			.filter((lg) => lg.roster.some((rp) => rp.id === playerId))
+			.map((lg) => lg.leagueId);
+		const response: { leagues: PlayerActionLeague[]; exposure: Exposure } = {
+			leagues,
+			exposure: computeExposure(
+				ownedLeagueIds,
+				leagues.map((lg) => lg.leagueId)
+			)
+		};
 		return json(response);
 	} catch (error) {
 		const message =
