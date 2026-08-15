@@ -3,6 +3,13 @@ import { dev } from '$app/environment';
 import type { RequestHandler } from './$types';
 import { login, MFL_COOKIE_NAME } from '$lib/mfl';
 
+export const GET: RequestHandler = () => {
+	return json(
+		{ success: false, error: 'Use POST to log in' },
+		{ status: 405, headers: { Allow: 'POST' } }
+	);
+};
+
 export const POST: RequestHandler = async ({ request, cookies }) => {
 	const formData = await request.formData();
 	const username = formData.get('username')?.toString();

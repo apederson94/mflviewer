@@ -9,10 +9,17 @@ import type {
 	MFLPendingWaiverRequest,
 	MFLFreeAgentsResponse,
 	MFLFreeAgentRaw,
-	StoredLeague,
+	League,
 	MFLLeagueResponse,
 	MFLAdpResponse,
-	PlayerData
+	MFLRostersResponse,
+	MFLPlayerRosterStatusResponse,
+	MFLRosterPlayer,
+	PlayerData,
+	PlayerActionLeague,
+	ExistingBid,
+	PositionLimit,
+	RosterPlayer
 } from './types';
 import { createTtlCache, msUntilNextCalendarDay } from './cache';
 import { resetImageCacheIfStale } from './playerImages';
@@ -28,6 +35,7 @@ const LEAGUE_CACHE_TTL_MS = 60 * 60 * 1000;
 const yearWeekCache = createTtlCache<{ year: string; week: number }>(
 	msUntilNextCalendarDay()
 );
+let yearWeekPromise: Promise<{ year: string; week: number }> | null = null;
 const leagueFullCache = createTtlCache<LeagueFull>(LEAGUE_CACHE_TTL_MS);
 const playerCache = createTtlCache<Map<string, PlayerData>>(
 	msUntilNextCalendarDay()
@@ -56,19 +64,29 @@ export async function getYearAndWeek(): Promise<{
 	if (cached) {
 		return { year: cached.year, week: cached.week };
 	}
+	if (yearWeekPromise) {
+		return yearWeekPromise;
+	}
 	// MFL's status endpoint is season-scoped (fflnetdynamic{year}); this URL
 	// must be updated when MFL rolls over to a new season.
-	const url =
-		'https://api.myfantasyleague.com/fflnetdynamic2026/mfl_status.json';
-	const response = await fetchJSON<{
-		mfl_status: { year: string; weeks: { CurrentWeek: string } };
-	}>(url);
-	const value = {
-		year: response.mfl_status.year,
-		week: parseInt(response.mfl_status.weeks.CurrentWeek || '1', 10)
-	};
-	yearWeekCache.set('current', value, msUntilNextCalendarDay());
-	return value;
+	yearWeekPromise = (async () => {
+		const url =
+			'https://api.myfantasyleague.com/fflnetdynamic2026/mfl_status.json';
+		const response = await fetchJSON<{
+			mfl_status: { year: string; weeks: { CurrentWeek: string } };
+		}>(url);
+		const value = {
+			year: response.mfl_status.year,
+			week: parseInt(response.mfl_status.weeks.CurrentWeek || '1', 10)
+		};
+		yearWeekCache.set('current', value, msUntilNextCalendarDay());
+		return value;
+	})();
+	try {
+		return await yearWeekPromise;
+	} finally {
+		yearWeekPromise = null;
+	}
 }
 
 export async function getCurrentYear(): Promise<string> {
@@ -86,13 +104,51 @@ export async function getBaseUrl(): Promise<string> {
 	return `https://api.myfantasyleague.com/${year}/export`;
 }
 
+// MFL's api. edge rate-limits bursts per IP (429). Serialize export calls so
+// parallel fan-outs never exceed a few in-flight requests at a time.
+const MAX_CONCURRENT_FETCHES = 2;
+const fetchQueue: (() => void)[] = [];
+let activeFetches = 0;
+
+async function acquireFetchSlot(): Promise<void> {
+	if (activeFetches < MAX_CONCURRENT_FETCHES) {
+		activeFetches++;
+		return;
+	}
+	await new Promise<void>((resolve) => fetchQueue.push(resolve));
+}
+
+function releaseFetchSlot(): void {
+	activeFetches--;
+	const next = fetchQueue.shift();
+	if (next) {
+		activeFetches++;
+		next();
+	}
+}
+
 export async function fetchJSON<T>(
 	url: string,
 	cookie?: string,
 	retries = 2
 ): Promise<T> {
+	await acquireFetchSlot();
+	try {
+		return await fetchJSONInner(url, cookie, retries);
+	} finally {
+		releaseFetchSlot();
+	}
+}
+
+async function fetchJSONInner<T>(
+	url: string,
+	cookie?: string,
+	retries = 2
+): Promise<T> {
 	const headers: Record<string, string> = {
-		'Content-Type': 'application/json'
+		'Content-Type': 'application/json',
+		'User-Agent':
+			'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36'
 	};
 
 	if (cookie) {
@@ -155,7 +211,20 @@ export async function login(
 	return { success: false, cookie: '' };
 }
 
-export async function getMyLeagues(cookie?: string): Promise<StoredLeague[]> {
+function leagueHostBase(url: string): string | undefined {
+	const match = url.match(/^(https?:\/\/[^/]+\/\d{4})/);
+	return match ? match[1] : undefined;
+}
+
+const myLeaguesCache = createTtlCache<League[]>(60 * 60 * 1000);
+
+export async function getMyLeagues(cookie?: string): Promise<League[]> {
+	const cacheKey = cookie || 'anon';
+	const cached = myLeaguesCache.get(cacheKey);
+	if (cached) {
+		return cached;
+	}
+
 	const baseUrl = await getBaseUrl();
 	const url = `${baseUrl}?TYPE=myleagues&JSON=1`;
 
@@ -165,10 +234,14 @@ export async function getMyLeagues(cookie?: string): Promise<StoredLeague[]> {
 			? toArray(response.leagues.league)
 			: [];
 
-		return leagues.map((league) => ({
+		const result: League[] = leagues.map((league) => ({
 			id: league.league_id,
-			name: league.name
+			name: league.name,
+			franchiseId: league.franchise_id,
+			baseUrl: league.url ? leagueHostBase(league.url) : undefined
 		}));
+		myLeaguesCache.set(cacheKey, result);
+		return result;
 	} catch (error) {
 		console.error(`Fetch leagues failed: ${error}`);
 		throw error;
@@ -179,6 +252,37 @@ export interface LeagueFull {
 	id: string;
 	name: string;
 	franchises: Map<string, string>;
+	currentWaiverType?: string;
+	bbidSeasonLimit?: number;
+	bbidIncrement?: number;
+	bbidMinimum?: number;
+	bbidConditional?: boolean;
+	rosterSize?: number;
+	starters?: number;
+	rosterLimits?: PositionLimit[];
+	franchiseBbidBalances?: Map<string, number>;
+}
+
+export function parsePositionLimits(rosterLimits?: string): PositionLimit[] {
+	if (!rosterLimits) return [];
+	return rosterLimits
+		.split(',')
+		.map((pair) => {
+			const [position, range] = pair.split(':');
+			const [minStr, maxStr] = (range || '0-0').split('-');
+			const parse = (value: string | undefined): number => {
+				const trimmed = (value ?? '0').trim();
+				if (!trimmed || trimmed === '0') return 0;
+				const num = parseInt(trimmed, 10);
+				return Number.isFinite(num) ? num : 0;
+			};
+			return {
+				position: (position || '').trim().toUpperCase(),
+				min: parse(minStr),
+				max: parse(maxStr)
+			};
+		})
+		.filter((limit) => limit.position);
 }
 
 export async function getLeagueFull(
@@ -194,6 +298,7 @@ export async function getLeagueFull(
 	const url = `${baseUrl}?TYPE=league&L=${encodeURIComponent(leagueId)}&JSON=1`;
 
 	const franchiseMap = new Map<string, string>();
+	const bbidBalances = new Map<string, number>();
 
 	try {
 		const response = await fetchJSON<MFLLeagueResponse>(url, cookie);
@@ -205,13 +310,37 @@ export async function getLeagueFull(
 			const franchises = toArray(response.league.franchises.franchise);
 			franchises.forEach((franchise) => {
 				franchiseMap.set(franchise.id, franchise.name);
+				if (franchise.bbidAvailableBalance) {
+					const balance = parseFloat(franchise.bbidAvailableBalance);
+					if (Number.isFinite(balance)) {
+						bbidBalances.set(franchise.id, balance);
+					}
+				}
 			});
 		}
 
+		const startersRaw = response.league?.starters?.count;
 		const league: LeagueFull = {
 			id: leagueIdVal,
 			name: leagueName,
-			franchises: franchiseMap
+			franchises: franchiseMap,
+			currentWaiverType: response.league?.currentWaiverType,
+			bbidSeasonLimit: response.league?.bbidSeasonLimit
+				? parseInt(response.league.bbidSeasonLimit, 10)
+				: undefined,
+			bbidIncrement: response.league?.bbidIncrement
+				? parseFloat(response.league.bbidIncrement)
+				: undefined,
+			bbidMinimum: response.league?.bbidMinimum
+				? parseFloat(response.league.bbidMinimum)
+				: undefined,
+			bbidConditional: response.league?.bbidConditional === 'Yes',
+			rosterSize: response.league?.rosterSize
+				? parseInt(response.league.rosterSize, 10)
+				: undefined,
+			starters: startersRaw ? parseInt(startersRaw, 10) : undefined,
+			rosterLimits: parsePositionLimits(response.league?.rosterLimits),
+			franchiseBbidBalances: bbidBalances
 		};
 
 		leagueFullCache.set(leagueIdVal, league);
@@ -359,10 +488,11 @@ export async function getTransactions(
 
 export async function getPendingWaivers(
 	leagueId: string,
-	cookie?: string
+	cookie?: string,
+	leagueHost?: string
 ): Promise<MFLPendingWaiverRequest[]> {
-	const baseUrl = await getBaseUrl();
-	const url = `${baseUrl}?TYPE=pendingWaivers&L=${encodeURIComponent(leagueId)}&JSON=1`;
+	const base = leagueHost ? `${leagueHost}/export` : await getBaseUrl();
+	const url = `${base}?TYPE=pendingWaivers&L=${encodeURIComponent(leagueId)}&JSON=1`;
 
 	try {
 		const response = await fetchJSON<MFLPendingWaiversResponse>(url, cookie);
@@ -391,4 +521,239 @@ export async function getFreeAgents(
 		console.error(`Fetch free agents for league ${leagueId} failed: ${error}`);
 		throw error;
 	}
+}
+
+export function parseAddsDrops(
+	addsDrops: string
+): { playerId: string; bid: string; dropPlayerId?: string }[] {
+	return addsDrops
+		.split(',')
+		.map((claim) => {
+			const parts = claim.split('_');
+			const playerId = parts[0] || '';
+			const bid = parts[1] || '0';
+			const drop = parts[2];
+			const dropPlayerId = drop && drop !== '0000' ? drop : undefined;
+			return { playerId, bid, dropPlayerId };
+		})
+		.filter((claim) => claim.playerId);
+}
+
+export async function getFranchiseRoster(
+	leagueId: string,
+	franchiseId: string,
+	cookie?: string,
+	leagueHost?: string
+): Promise<MFLRosterPlayer[]> {
+	const base = leagueHost ? `${leagueHost}/export` : await getBaseUrl();
+	const url = `${base}?TYPE=rosters&L=${encodeURIComponent(
+		leagueId
+	)}&JSON=1&FRANCHISE=${encodeURIComponent(franchiseId)}`;
+
+	try {
+		const response = await fetchJSON<MFLRostersResponse>(url, cookie);
+		const franchises = response.rosters?.franchise
+			? toArray(response.rosters.franchise)
+			: [];
+		const roster =
+			franchises.find((franchise) => franchise.id === franchiseId) ||
+			franchises[0];
+		return roster?.player ? toArray(roster.player) : [];
+	} catch (error) {
+		console.error(`Fetch roster for league ${leagueId} failed: ${error}`);
+		throw error;
+	}
+}
+
+export async function getPlayerRosterStatus(
+	leagueId: string,
+	playerId: string,
+	cookie?: string
+): Promise<{
+	status: 'freeAgent' | 'rostered' | 'locked' | 'unknown';
+	rosteredOn?: string;
+}> {
+	const baseUrl = await getBaseUrl();
+	const url = `${baseUrl}?TYPE=playerRosterStatus&L=${encodeURIComponent(
+		leagueId
+	)}&JSON=1&P=${encodeURIComponent(playerId)}`;
+
+	try {
+		const response = await fetchJSON<MFLPlayerRosterStatusResponse>(
+			url,
+			cookie
+		);
+		const status = response.playerRosterStatuses?.playerStatus;
+		if (status?.roster_franchise?.franchise_id) {
+			return {
+				status: 'rostered',
+				rosteredOn: status.roster_franchise.franchise_id
+			};
+		}
+		if (status?.is_fa === '1') {
+			return { status: status.locked === '1' ? 'locked' : 'freeAgent' };
+		}
+		return { status: 'unknown' };
+	} catch (error) {
+		console.error(
+			`Fetch player roster status for league ${leagueId} failed: ${error}`
+		);
+		throw error;
+	}
+}
+
+async function findExistingBid(
+	leagueId: string,
+	playerId: string,
+	franchiseId: string,
+	leagueHost: string,
+	cookie?: string
+): Promise<ExistingBid | null> {
+	const pending = await getPendingWaivers(leagueId, cookie, leagueHost);
+	const myRequests = pending.filter(
+		(request) => !request.franchise || request.franchise === franchiseId
+	);
+	for (const request of myRequests) {
+		const claim = parseAddsDrops(request.addsDrops).find(
+			(c) => c.playerId === playerId
+		);
+		if (claim) {
+			return {
+				playerId,
+				bid: claim.bid,
+				dropPlayerId: claim.dropPlayerId,
+				round: request.round
+			};
+		}
+	}
+	return null;
+}
+
+const actionContextCache = createTtlCache<PlayerActionLeague>(60 * 1000);
+
+export function bustActionContextCache(): void {
+	actionContextCache.clear();
+}
+
+export async function getActionContext(
+	leagueId: string,
+	playerId: string,
+	players: Map<string, PlayerData>,
+	cookie?: string
+): Promise<PlayerActionLeague | null> {
+	const cacheKey = `${leagueId}:${playerId}`;
+	const cached = actionContextCache.get(cacheKey);
+	if (cached) {
+		return cached;
+	}
+
+	try {
+		const [league, myLeagues] = await Promise.all([
+			getLeagueFull(leagueId, cookie),
+			getMyLeagues(cookie)
+		]);
+		if (!league) return null;
+
+		const myLeague = myLeagues.find((l) => l.id === leagueId);
+		const franchiseId = myLeague?.franchiseId;
+		const leagueHost = myLeague?.baseUrl;
+		if (!franchiseId || !leagueHost) return null;
+
+		const [roster, status, existingBid] = await Promise.all([
+			getFranchiseRoster(leagueId, franchiseId, cookie, leagueHost),
+			getPlayerRosterStatus(leagueId, playerId, cookie),
+			findExistingBid(leagueId, playerId, franchiseId, leagueHost, cookie)
+		]);
+
+		const rosterPlayers: RosterPlayer[] = roster.map((p) => ({
+			id: p.id,
+			status: p.status || 'ROSTER',
+			name: players.get(p.id)?.name,
+			position: players.get(p.id)?.position
+		}));
+
+		const result: PlayerActionLeague = {
+			leagueId,
+			leagueName: league.name,
+			franchiseId,
+			franchiseName:
+				league.franchises.get(franchiseId) || `Franchise ${franchiseId}`,
+			baseUrl: leagueHost,
+			bidSettings: {
+				waiverType: league.currentWaiverType || 'FREE_AGENT',
+				seasonLimit: league.bbidSeasonLimit,
+				increment: league.bbidIncrement,
+				minimum: league.bbidMinimum,
+				conditional: league.bbidConditional
+			},
+			rosterSize: league.rosterSize ?? 0,
+			starters: league.starters ?? 0,
+			positionLimits: league.rosterLimits ?? [],
+			bbidAvailableBalance: league.franchiseBbidBalances?.get(franchiseId),
+			playerStatus: status.status,
+			rosteredOn: status.rosteredOn,
+			onMyRoster: status.rosteredOn === franchiseId,
+			roster: rosterPlayers,
+			existingBid
+		};
+
+		actionContextCache.set(cacheKey, result);
+		return result;
+	} catch (error) {
+		console.error(
+			`Failed to build action context for league ${leagueId}: ${error}`
+		);
+		return null;
+	}
+}
+
+export async function submitImport(
+	leagueHost: string,
+	type: string,
+	params: Record<string, string>,
+	cookie: string
+): Promise<{ success: boolean; message?: string; error?: string }> {
+	const body = new URLSearchParams({ TYPE: type, XML: '1', ...params });
+	const url = `${leagueHost}/import`;
+
+	let response: Response;
+	try {
+		response = await fetch(url, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/x-www-form-urlencoded',
+				Cookie: cookie,
+				'User-Agent':
+					'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36'
+			},
+			body: body.toString()
+		});
+	} catch (error) {
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : 'Import request failed'
+		};
+	}
+
+	const text = await response.text();
+	const errorMatch = text.match(/<error[^>]*>([\s\S]*?)<\/error>/i);
+	if (errorMatch) {
+		return {
+			success: false,
+			error: (errorMatch[1] ?? '').trim() || 'MFL rejected the request'
+		};
+	}
+	if (!response.ok) {
+		return {
+			success: false,
+			error: `MFL returned HTTP ${response.status}`
+		};
+	}
+	if (!/<status/i.test(text)) {
+		return {
+			success: false,
+			error: 'Unexpected response from MFL'
+		};
+	}
+	return { success: true };
 }

@@ -1,7 +1,13 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import type { PageData } from './$types';
-	import type { MFLTransaction, MFLPendingWaiver, Player, Tab } from '$lib';
+	import type {
+		MFLTransaction,
+		MFLPendingWaiver,
+		Player,
+		Tab,
+		WaiverManagerLeague
+	} from '$lib';
 	import type { DaysOption, PositionOption, SortOption } from '$lib';
 	import { fetchJson } from '$lib/fetchJson';
 	import Header from '$lib/components/Header.svelte';
@@ -41,6 +47,7 @@
 	let leagueSearch = $state('');
 	let activeTab = $state<Tab>('transactions');
 	let pendingWaivers = $state<MFLPendingWaiver[]>([]);
+	let waiverContexts = $state<Record<string, WaiverManagerLeague>>({});
 	let waiverLoading = $state(false);
 	let freeAgents = $state<Player[]>([]);
 	let freeAgentLoading = $state(false);
@@ -146,6 +153,7 @@
 		extract: (data: TResponse) => TList[];
 		setList: (list: TList[]) => void;
 		setLoading: (loading: boolean) => void;
+		onData?: (data: TResponse) => void;
 	}): (leagueIds: string[]) => Promise<void> {
 		let controller: AbortController | null = null;
 
@@ -166,6 +174,7 @@
 					ctrl.signal
 				);
 				if (ctrl.signal.aborted) return;
+				config.onData?.(data);
 				config.setList(config.extract(data));
 			} catch (err) {
 				if (ctrl.signal.aborted) return;
@@ -189,15 +198,25 @@
 	});
 
 	const loadPendingWaivers = createTabLoader<
-		{ pendingWaivers: MFLPendingWaiver[] },
+		{
+			pendingWaivers: MFLPendingWaiver[];
+			contexts: WaiverManagerLeague[];
+		},
 		MFLPendingWaiver
 	>({
 		buildUrl: (leagueIds) =>
 			`/api/mfl?type=pendingWaivers&league=${leagueIds.join(',')}`,
 		extract: (data) => data.pendingWaivers || [],
 		setList: (list) => (pendingWaivers = list),
-		setLoading: (v) => (waiverLoading = v)
+		setLoading: (v) => (waiverLoading = v),
+		onData: (data) => setWaiverContexts(data.contexts || [])
 	});
+
+	function setWaiverContexts(contexts: WaiverManagerLeague[]) {
+		const map: Record<string, WaiverManagerLeague> = {};
+		for (const ctx of contexts) map[ctx.leagueId] = ctx;
+		waiverContexts = map;
+	}
 
 	const loadFreeAgents = createTabLoader<{ freeAgents: Player[] }, Player>({
 		buildUrl: (leagueIds) =>
@@ -419,7 +438,12 @@
 									{waiver}
 									{year}
 									{playerCache}
+									context={waiverContexts[waiver.leagueId ?? '']}
+									myFranchiseId={leagues.find((l) => l.id === waiver.leagueId)
+										?.franchiseId}
 									onSelect={openProfile}
+									onChanged={() =>
+										loadPendingWaivers(Array.from(selectedLeagueIds))}
 								/>
 							{/each}
 						</div>
@@ -463,7 +487,13 @@
 	</div>
 
 	<AvailTooltip tooltip={availTooltip} {leagueName} />
-	<PlayerProfileModal player={profilePlayer} onclose={closeProfile} {year} />
+	<PlayerProfileModal
+		player={profilePlayer}
+		{leagues}
+		{year}
+		onclose={closeProfile}
+		onActionComplete={() => reloadForTab(Array.from(selectedLeagueIds))}
+	/>
 </div>
 
 <style>

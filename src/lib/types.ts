@@ -12,6 +12,8 @@ export interface Player {
 export interface League {
 	id: string;
 	name: string;
+	franchiseId?: string;
+	baseUrl?: string;
 }
 
 export type Tab = 'transactions' | 'waivers' | 'freeAgents';
@@ -74,6 +76,8 @@ export interface MFLTransactionsResponse {
 export interface MFLMyLeague {
 	league_id: string;
 	name: string;
+	franchise_id?: string;
+	url?: string;
 }
 
 export interface MFLMyLeaguesResponse {
@@ -117,12 +121,25 @@ export interface StoredLeague {
 export interface MFLFranchise {
 	id: string;
 	name: string;
+	bbidAvailableBalance?: string;
 }
 
 export interface MFLLeagueResponse {
 	league: {
 		id: string;
 		name: string;
+		rosterSize?: string;
+		rosterLimits?: string;
+		currentWaiverType?: string;
+		bbidSeasonLimit?: string;
+		bbidIncrement?: string;
+		bbidMinimum?: string;
+		bbidConditional?: string;
+		starters?: {
+			count?: string;
+			position?:
+				{ name?: string; limit?: string } | { name?: string; limit?: string }[];
+		};
 		franchises?: {
 			franchise: MFLFranchise | MFLFranchise[];
 		};
@@ -152,6 +169,7 @@ export interface ParsedWaiverClaim {
 }
 
 export interface MFLPendingWaiver {
+	franchise?: string;
 	comments: string;
 	timestamp: string;
 	round: string;
@@ -197,4 +215,135 @@ export interface MFLAdpResponse {
 	adp: {
 		player: MFLAdpPlayer | MFLAdpPlayer[];
 	};
+}
+
+export interface MFLRosterPlayer {
+	id: string;
+	status?: string;
+}
+
+export interface MFLRoster {
+	id: string;
+	name?: string;
+	player?: MFLRosterPlayer | MFLRosterPlayer[];
+}
+
+export interface MFLRostersResponse {
+	rosters: {
+		franchise: MFLRoster | MFLRoster[];
+	};
+}
+
+export interface MFLPlayerRosterStatusResponse {
+	playerRosterStatuses?: {
+		playerStatus?: {
+			id?: string;
+			is_fa?: string;
+			locked?: string;
+			roster_franchise?: {
+				franchise_id?: string;
+				status?: string;
+			};
+		};
+	};
+}
+
+export interface PositionLimit {
+	position: string;
+	min: number;
+	max: number;
+}
+
+export interface BbidSettings {
+	waiverType: string;
+	seasonLimit?: number;
+	increment?: number;
+	minimum?: number;
+	conditional?: boolean;
+}
+
+export interface RosterPlayer {
+	id: string;
+	status: string;
+	name?: string;
+	position?: string;
+}
+
+export interface ExistingBid {
+	playerId: string;
+	bid: string;
+	dropPlayerId?: string;
+	round: string;
+}
+
+export interface PlayerActionLeague {
+	leagueId: string;
+	leagueName: string;
+	franchiseId: string;
+	franchiseName: string;
+	baseUrl: string;
+	bidSettings: BbidSettings;
+	rosterSize: number;
+	starters: number;
+	positionLimits: PositionLimit[];
+	bbidAvailableBalance?: number;
+	playerStatus: 'freeAgent' | 'rostered' | 'locked' | 'unknown';
+	rosteredOn?: string;
+	onMyRoster: boolean;
+	roster: RosterPlayer[];
+	existingBid: ExistingBid | null;
+}
+
+export interface PlayerActionContext {
+	leagues: PlayerActionLeague[];
+}
+
+export interface WaiverManagerClaim {
+	playerId: string;
+	bid: string;
+	dropPlayerId?: string;
+	round: string;
+	addedPlayer?: Player;
+	droppedPlayer?: Player;
+}
+
+export interface WaiverManagerLeague {
+	leagueId: string;
+	leagueName: string;
+	franchiseId: string;
+	franchiseName: string;
+	baseUrl: string;
+	bidSettings: BbidSettings;
+	rosterSize: number;
+	starters: number;
+	positionLimits: PositionLimit[];
+	bbidAvailableBalance?: number;
+	roster: RosterPlayer[];
+	claims: WaiverManagerClaim[];
+}
+
+export interface WaiverSetClaim {
+	playerId: string;
+	bid: string;
+	dropPlayerId?: string;
+}
+
+export type ActionRequest =
+	| {
+			leagueId: string;
+			playerId: string;
+			action: 'bid' | 'withdraw';
+			bid?: string;
+			dropPlayerId?: string;
+	  }
+	| {
+			leagueId: string;
+			action: 'saveAll';
+			claims: WaiverSetClaim[];
+	  };
+
+export interface ActionResult {
+	success: boolean;
+	message?: string;
+	error?: string;
 }

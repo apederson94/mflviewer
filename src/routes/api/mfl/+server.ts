@@ -4,9 +4,12 @@ import {
 	getTransactions,
 	getPendingWaivers,
 	getFreeAgents,
+	getFranchiseRoster,
 	loadPlayerCache,
 	getCurrentYear,
 	getLeagueFull,
+	getMyLeagues,
+	parseAddsDrops,
 	MFL_COOKIE_NAME
 } from '$lib/mfl';
 import {
@@ -15,6 +18,27 @@ import {
 	enrichFreeAgents
 } from '$lib/enrichment';
 import { warmPlayerImages } from '$lib/playerImages';
+import type {
+	Player,
+	PlayerData,
+	RosterPlayer,
+	WaiverManagerClaim,
+	WaiverManagerLeague
+} from '$lib/types';
+
+function resolvePlayer(
+	players: Map<string, PlayerData>,
+	id: string
+): Player | undefined {
+	const data = players.get(id);
+	return {
+		id,
+		name: data?.name ?? `Unknown (${id})`,
+		position: data?.position?.toUpperCase(),
+		team: data?.team,
+		rosterPct: data?.rosterPct
+	};
+}
 
 export const GET: RequestHandler = async ({ cookies, url }) => {
 	const cookie = cookies.get(MFL_COOKIE_NAME);
@@ -90,20 +114,52 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
 					.map((id) => id.trim())
 					.filter(Boolean);
 				const players = await loadPlayerCache(cookie);
+				const myLeagues = await getMyLeagues(cookie);
 
 				const waiverErrors: string[] = [];
 				const leagueResults = await Promise.all(
 					leagueIds.map(async (lid) => {
 						try {
-							const [waivers, league] = await Promise.all([
-								getPendingWaivers(lid, cookie),
-								getLeagueFull(lid, cookie)
+							const myLeague = myLeagues.find((league) => league.id === lid);
+							const leagueHost = myLeague?.baseUrl;
+							const franchiseId = myLeague?.franchiseId;
+							const [waivers, league, roster] = await Promise.all([
+								getPendingWaivers(lid, cookie, leagueHost),
+								getLeagueFull(lid, cookie),
+								franchiseId && leagueHost
+									? getFranchiseRoster(lid, franchiseId, cookie, leagueHost)
+									: Promise.resolve([])
 							]);
 							return {
 								leagueId: lid,
 								leagueName: league?.name || lid,
 								waivers,
-								franchiseMap: league?.franchises || new Map<string, string>()
+								franchiseMap: league?.franchises || new Map<string, string>(),
+								franchiseId: franchiseId ?? '',
+								franchiseName: franchiseId
+									? league?.franchises.get(franchiseId) ||
+										`Franchise ${franchiseId}`
+									: '',
+								baseUrl: leagueHost ?? '',
+								roster: roster.map((p): RosterPlayer => ({
+									id: p.id,
+									status: p.status || 'ROSTER',
+									name: players.get(p.id)?.name,
+									position: players.get(p.id)?.position
+								})),
+								settings: {
+									waiverType: league?.currentWaiverType || 'FREE_AGENT',
+									seasonLimit: league?.bbidSeasonLimit,
+									increment: league?.bbidIncrement,
+									minimum: league?.bbidMinimum,
+									conditional: league?.bbidConditional
+								},
+								rosterSize: league?.rosterSize ?? 0,
+								starters: league?.starters ?? 0,
+								positionLimits: league?.rosterLimits ?? [],
+								bbidAvailableBalance: league?.franchiseBbidBalances?.get(
+									franchiseId ?? ''
+								)
 							};
 						} catch (e) {
 							waiverErrors.push(
@@ -122,17 +178,53 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
 					return json(
 						{
 							pendingWaivers: [],
+							contexts: [],
 							error: `MFL request failed: ${waiverErrors.join('; ')}`
 						},
 						{ status: 502 }
 					);
 				}
 
-				const enriched = enrichPendingWaivers(
-					leagueResults.filter((r): r is NonNullable<typeof r> => r !== null),
-					players
+				const successful = leagueResults.filter(
+					(r): r is NonNullable<typeof r> => r !== null
 				);
-				return json({ pendingWaivers: enriched });
+				const enriched = enrichPendingWaivers(successful, players);
+
+				const contexts: WaiverManagerLeague[] = successful
+					.filter((r) => r.franchiseId && r.baseUrl)
+					.map((r) => {
+						const myRequests = r.waivers.filter(
+							(request) =>
+								!request.franchise || request.franchise === r.franchiseId
+						);
+						const claims: WaiverManagerClaim[] = myRequests.flatMap((request) =>
+							parseAddsDrops(request.addsDrops).map((claim) => ({
+								playerId: claim.playerId,
+								bid: claim.bid,
+								dropPlayerId: claim.dropPlayerId,
+								round: request.round,
+								addedPlayer: resolvePlayer(players, claim.playerId),
+								droppedPlayer: claim.dropPlayerId
+									? resolvePlayer(players, claim.dropPlayerId)
+									: undefined
+							}))
+						);
+						return {
+							leagueId: r.leagueId,
+							leagueName: r.leagueName,
+							franchiseId: r.franchiseId,
+							franchiseName: r.franchiseName,
+							baseUrl: r.baseUrl,
+							bidSettings: r.settings,
+							rosterSize: r.rosterSize,
+							starters: r.starters,
+							positionLimits: r.positionLimits,
+							bbidAvailableBalance: r.bbidAvailableBalance,
+							roster: r.roster,
+							claims
+						} satisfies WaiverManagerLeague;
+					});
+				return json({ pendingWaivers: enriched, contexts });
 			}
 
 			case 'freeAgents': {

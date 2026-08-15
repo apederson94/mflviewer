@@ -88,11 +88,17 @@
 	}
 
 	.tab-count {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		height: 1.15rem;
+		min-width: 1.15rem;
+		padding: 0 0.3rem;
 		font-size: 0.7rem;
+		line-height: 1;
 		background: var(--highlight);
 		color: var(--on-highlight);
 		border: 1px solid var(--border);
-		padding: 0.05rem 0.35rem;
 		font-weight: 900;
 	}
 
