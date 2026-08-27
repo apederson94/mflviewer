@@ -343,11 +343,14 @@ export async function getLeagueFull(
 			franchiseBbidBalances: bbidBalances
 		};
 
-		leagueFullCache.set(leagueIdVal, league);
+		leagueFullCache.set(leagueId, league);
 
 		return league;
 	} catch (error) {
 		console.error(`Fetch full league ${leagueId} failed: ${error}`);
+		console.warn(
+			`League ${leagueId} franchise data unavailable, transactions will show fallback names`
+		);
 		return null;
 	}
 }

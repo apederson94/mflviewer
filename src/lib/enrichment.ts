@@ -48,7 +48,12 @@ export function getFranchiseName(
 	franchiseCache: Map<string, string>,
 	franchiseId: string
 ): string {
-	return franchiseCache.get(franchiseId) || `Franchise ${franchiseId}`;
+	const name = franchiseCache.get(franchiseId);
+	if (name) return name;
+	console.warn(
+		`Franchise name not found for ID "${franchiseId}" (cache size: ${franchiseCache.size})`
+	);
+	return `Franchise ${franchiseId}`;
 }
 
 export function formatDraftPick(pickId: string, currentYear?: string): string {
